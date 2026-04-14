@@ -61,6 +61,16 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       .single();
 
     if (reverseSwipe) {
+      // Check if match already exists
+      const { data: existingMatch } = await supabase
+        .from("matches")
+        .select("*, dog_a:dogs!matches_dog_a_id_fkey(*), dog_b:dogs!matches_dog_b_id_fkey(*)")
+        .or(`and(dog_a_id.eq.${myDogId},dog_b_id.eq.${targetDogId}),and(dog_a_id.eq.${targetDogId},dog_b_id.eq.${myDogId})`)
+        .limit(1)
+        .single();
+
+      if (existingMatch) return existingMatch;
+
       const { data: match } = await supabase
         .from("matches")
         .insert({ dog_a_id: myDogId, dog_b_id: targetDogId })

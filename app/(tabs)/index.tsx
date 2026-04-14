@@ -5,6 +5,7 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import { Text, Button, Portal, Modal } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -107,7 +108,19 @@ export default function ExploreScreen() {
         <Text style={styles.emptyTitle}>
           {loadingCandidates ? "尋找狗狗中..." : "附近暫時沒有新狗狗"}
         </Text>
-        <Text style={styles.emptyText}>晚點再來看看吧！</Text>
+        <Text style={styles.emptyText}>
+          {loadingCandidates ? "" : "試試開無痕視窗，用另一個帳號建立狗狗吧！"}
+        </Text>
+        {!loadingCandidates && (
+          <Button
+            mode="outlined"
+            textColor={colors.primary}
+            onPress={() => myDog && fetchCandidates(myDog.id)}
+            style={{ borderRadius: 25, marginTop: spacing.md }}
+          >
+            重新搜尋
+          </Button>
+        )}
       </View>
     );
   }
@@ -150,34 +163,28 @@ export default function ExploreScreen() {
 
       {/* Action buttons */}
       <View style={styles.actions}>
-        <Button
-          mode="contained"
-          buttonColor={colors.pass}
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: colors.pass }]}
           onPress={() => {
             Animated.spring(pan, {
               toValue: { x: -width - 100, y: 0 },
               useNativeDriver: false,
             }).start(() => handleSwipeComplete("pass"));
           }}
-          style={styles.actionBtn}
-          contentStyle={styles.actionContent}
         >
-          <MaterialCommunityIcons name="close" size={28} color="#FFF" />
-        </Button>
-        <Button
-          mode="contained"
-          buttonColor={colors.like}
+          <MaterialCommunityIcons name="close" size={32} color="#FFF" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: colors.like }]}
           onPress={() => {
             Animated.spring(pan, {
               toValue: { x: width + 100, y: 0 },
               useNativeDriver: false,
             }).start(() => handleSwipeComplete("like"));
           }}
-          style={styles.actionBtn}
-          contentStyle={styles.actionContent}
         >
-          <MaterialCommunityIcons name="heart" size={28} color="#FFF" />
-        </Button>
+          <MaterialCommunityIcons name="heart" size={32} color="#FFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Match popup */}
@@ -251,13 +258,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   actionBtn: {
-    borderRadius: 50,
     width: 64,
     height: 64,
-  },
-  actionContent: {
-    width: 64,
-    height: 64,
+    borderRadius: 32,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   empty: {
     flex: 1,

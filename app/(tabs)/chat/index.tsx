@@ -27,7 +27,18 @@ export default function ChatListScreen() {
     return match.dog_a_id === myDog.id ? match.dog_b : match.dog_a;
   };
 
-  if (matches.length === 0) {
+  // Deduplicate matches by the other dog's id
+  const seen = new Set<string>();
+  const uniqueMatches = matches.filter((m) => {
+    const otherDogId = myDog
+      ? (m.dog_a_id === myDog.id ? m.dog_b_id : m.dog_a_id)
+      : m.dog_a_id;
+    if (seen.has(otherDogId)) return false;
+    seen.add(otherDogId);
+    return true;
+  });
+
+  if (uniqueMatches.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyIcon}>💬</Text>
@@ -40,7 +51,7 @@ export default function ChatListScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={matches}
+        data={uniqueMatches}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const otherDog = getOtherDog(item);

@@ -4,8 +4,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing } from "../constants/theme";
 import type { Dog } from "../types";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = width - spacing.lg * 2;
+const { width, height } = Dimensions.get("window");
+const CARD_WIDTH = Math.min(width - spacing.lg * 2, 400);
+const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.3);
 
 interface DogCardProps {
   dog: Dog;
@@ -24,7 +25,7 @@ export default function DogCard({ dog }: DogCardProps) {
     <View style={styles.card}>
       <Image
         source={
-          dog.photos.length > 0
+          dog.photos && dog.photos.length > 0
             ? { uri: dog.photos[0] }
             : require("../assets/icon.png")
         }
@@ -32,18 +33,18 @@ export default function DogCard({ dog }: DogCardProps) {
       />
       <View style={styles.overlay}>
         <View style={styles.info}>
-          <Text style={styles.name}>
-            {dog.name}{" "}
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{dog.name}</Text>
             <MaterialCommunityIcons
               name={dog.gender === "male" ? "gender-male" : "gender-female"}
-              size={24}
+              size={22}
               color={dog.gender === "male" ? "#64B5F6" : "#F48FB1"}
             />
-          </Text>
+          </View>
           <Text style={styles.details}>
             {dog.breed} · {ageText} · {sizeText}
           </Text>
-          {dog.bio ? <Text style={styles.bio}>{dog.bio}</Text> : null}
+          {dog.bio ? <Text style={styles.bio} numberOfLines={2}>{dog.bio}</Text> : null}
           <View style={styles.tags}>
             {dog.personality.slice(0, 4).map((tag) => (
               <Chip
@@ -58,7 +59,7 @@ export default function DogCard({ dog }: DogCardProps) {
           </View>
           {dog.owner && (
             <Text style={styles.owner}>
-              🧑 主人：{dog.owner.display_name}
+              主人：{dog.owner.display_name}
             </Text>
           )}
         </View>
@@ -70,7 +71,7 @@ export default function DogCard({ dog }: DogCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.3,
+    height: CARD_HEIGHT,
     borderRadius: 24,
     overflow: "hidden",
     backgroundColor: colors.card,
@@ -88,24 +89,29 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.3)",
   },
   info: {
-    padding: spacing.lg,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   name: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#FFF",
   },
   details: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#EEE",
     marginTop: 2,
   },
   bio: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#DDD",
     marginTop: spacing.xs,
   },
@@ -121,10 +127,10 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: "#FFF",
-    fontSize: 12,
+    fontSize: 11,
   },
   owner: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#CCC",
     marginTop: spacing.sm,
   },

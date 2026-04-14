@@ -60,7 +60,6 @@ export const BREED_OPTIONS = [
   "柴犬", "柯基", "黃金獵犬", "拉布拉多", "貴賓",
   "法鬥", "哈士奇", "邊牧", "馬爾濟斯", "吉娃娃",
   "臘腸", "米克斯", "雪納瑞", "約克夏", "博美",
-  "其他",
 ] as const;
 
 export const SIZE_OPTIONS = [

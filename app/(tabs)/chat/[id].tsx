@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Text, TextInput, IconButton } from "react-native-paper";
+import { Text, TextInput } from "react-native-paper";
 import { useLocalSearchParams } from "expo-router";
 import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
@@ -40,7 +40,7 @@ export default function ChatRoomScreen() {
     setText("");
   };
 
-  const isMyMessage = (senderId: string) => senderId === session?.user?.id;
+  const myUserId = session?.user?.id;
 
   return (
     <KeyboardAvoidingView
@@ -53,32 +53,43 @@ export default function ChatRoomScreen() {
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.bubble,
-              isMyMessage(item.sender_id) ? styles.myBubble : styles.otherBubble,
-            ]}
-          >
-            {!isMyMessage(item.sender_id) && item.sender && (
-              <Text style={styles.senderName}>{item.sender.display_name}</Text>
-            )}
-            <Text
+        renderItem={({ item }) => {
+          const isMine = item.sender_id === myUserId;
+
+          return (
+            <View
               style={[
-                styles.messageText,
-                isMyMessage(item.sender_id) ? styles.myText : styles.otherText,
+                styles.bubbleRow,
+                isMine ? styles.bubbleRowRight : styles.bubbleRowLeft,
               ]}
             >
-              {item.content}
-            </Text>
-            <Text style={styles.time}>
-              {new Date(item.created_at).toLocaleTimeString("zh-TW", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-          </View>
-        )}
+              <View
+                style={[
+                  styles.bubble,
+                  isMine ? styles.myBubble : styles.otherBubble,
+                ]}
+              >
+                {!isMine && item.sender && (
+                  <Text style={styles.senderName}>{item.sender.display_name}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.messageText,
+                    isMine ? styles.myText : styles.otherText,
+                  ]}
+                >
+                  {item.content}
+                </Text>
+                <Text style={[styles.time, isMine ? styles.myTime : styles.otherTime]}>
+                  {new Date(item.created_at).toLocaleTimeString("zh-TW", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </View>
+            </View>
+          );
+        }}
       />
 
       <View style={styles.inputBar}>
@@ -114,20 +125,27 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.sm,
   },
+  bubbleRow: {
+    flexDirection: "row",
+    marginBottom: spacing.sm,
+  },
+  bubbleRowRight: {
+    justifyContent: "flex-end",
+  },
+  bubbleRowLeft: {
+    justifyContent: "flex-start",
+  },
   bubble: {
     maxWidth: "75%",
     padding: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 18,
-    marginBottom: spacing.sm,
   },
   myBubble: {
-    alignSelf: "flex-end",
     backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   otherBubble: {
-    alignSelf: "flex-start",
     backgroundColor: colors.surface,
     borderBottomLeftRadius: 4,
     elevation: 1,
@@ -154,9 +172,14 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 10,
-    color: "rgba(0,0,0,0.4)",
-    alignSelf: "flex-end",
     marginTop: 2,
+    textAlign: "right",
+  },
+  myTime: {
+    color: "rgba(255,255,255,0.6)",
+  },
+  otherTime: {
+    color: "rgba(0,0,0,0.35)",
   },
   inputBar: {
     padding: spacing.sm,

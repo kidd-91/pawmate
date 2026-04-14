@@ -5,6 +5,8 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Platform,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -30,10 +32,12 @@ export default function ProfileScreen() {
 
   const [name, setName] = useState("");
   const [breed, setBreed] = useState("");
+  const [customBreed, setCustomBreed] = useState("");
   const [ageMonths, setAgeMonths] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [size, setSize] = useState("medium");
   const [personality, setPersonality] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState("");
   const [bio, setBio] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -59,33 +63,89 @@ export default function ProfileScreen() {
     }
   }, [myDog]);
 
+  const [uploading, setUploading] = useState(false);
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      const ext = uri.split(".").pop();
-      const fileName = `${session!.user.id}/${Date.now()}.${ext}`;
+      const asset = result.assets[0];
+      setUploading(true);
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      try {
+        const mimeType = asset.mimeType || "image/jpeg";
+        const ext = mimeType.split("/")[1] || "jpg";
+        const fileName = `${session!.user.id}/${Date.now()}.${ext}`;
 
-      const { data, error } = await supabase.storage
-        .from("dog-photos")
-        .upload(fileName, blob, { contentType: `image/${ext}` });
+        if (asset.base64) {
+          // Use base64 decode — works on both web and native
+          const binaryString = atob(asset.base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
 
-      if (data) {
-        const { data: publicUrl } = supabase.storage
-          .from("dog-photos")
-          .getPublicUrl(data.path);
-        setPhotos([...photos, publicUrl.publicUrl]);
+          const { data, error } = await supabase.storage
+            .from("dog-photos")
+            .upload(fileName, bytes.buffer, {
+              contentType: mimeType,
+              upsert: true,
+            });
+
+          if (error) {
+            Alert.alert("上傳失敗", error.message);
+            setUploading(false);
+            return;
+          }
+
+          if (data) {
+            const { data: publicUrl } = supabase.storage
+              .from("dog-photos")
+              .getPublicUrl(data.path);
+            setPhotos((prev) => [...prev, publicUrl.publicUrl]);
+          }
+        } else {
+          // Fallback: fetch URI as blob
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+          const arrayBuffer = await new Response(blob).arrayBuffer();
+
+          const { data, error } = await supabase.storage
+            .from("dog-photos")
+            .upload(fileName, arrayBuffer, {
+              contentType: mimeType,
+              upsert: true,
+            });
+
+          if (error) {
+            Alert.alert("上傳失敗", error.message);
+            setUploading(false);
+            return;
+          }
+
+          if (data) {
+            const { data: publicUrl } = supabase.storage
+              .from("dog-photos")
+              .getPublicUrl(data.path);
+            setPhotos((prev) => [...prev, publicUrl.publicUrl]);
+          }
+        }
+      } catch (e: any) {
+        Alert.alert("上傳失敗", e.message || "未知錯誤");
       }
+
+      setUploading(false);
     }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const togglePersonality = (tag: string) => {
@@ -96,14 +156,28 @@ export default function ProfileScreen() {
     }
   };
 
+  const addCustomTag = () => {
+    const tag = customTag.trim();
+    if (!tag) return;
+    if (personality.includes(tag)) {
+      setCustomTag("");
+      return;
+    }
+    if (personality.length >= 5) return;
+    setPersonality([...personality, tag]);
+    setCustomTag("");
+  };
+
   const handleSave = async () => {
     if (!session?.user?.id || !name.trim()) return;
     setSaving(true);
 
+    const finalBreed = breed || customBreed.trim();
+
     const dogData = {
       owner_id: session.user.id,
       name: name.trim(),
-      breed,
+      breed: finalBreed,
       age_months: parseInt(ageMonths) || 0,
       gender,
       size,
@@ -114,9 +188,11 @@ export default function ProfileScreen() {
     };
 
     if (myDog) {
-      await supabase.from("dogs").update(dogData).eq("id", myDog.id);
+      const { error } = await supabase.from("dogs").update(dogData).eq("id", myDog.id);
+      if (error) Alert.alert("儲存失敗", error.message);
     } else {
-      await supabase.from("dogs").insert(dogData);
+      const { error } = await supabase.from("dogs").insert(dogData);
+      if (error) Alert.alert("儲存失敗", error.message);
     }
 
     await fetchMyDog();
@@ -143,11 +219,23 @@ export default function ProfileScreen() {
       <Text style={styles.label}>照片</Text>
       <ScrollView horizontal style={styles.photoRow} showsHorizontalScrollIndicator={false}>
         {photos.map((uri, i) => (
-          <Image key={i} source={{ uri }} style={styles.photo} />
+          <View key={i} style={styles.photoWrapper}>
+            <Image source={{ uri }} style={styles.photo} />
+            <TouchableOpacity
+              style={styles.removePhoto}
+              onPress={() => removePhoto(i)}
+            >
+              <MaterialCommunityIcons name="close-circle" size={22} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
         ))}
-        <TouchableOpacity style={styles.addPhoto} onPress={pickImage}>
-          <MaterialCommunityIcons name="camera-plus" size={32} color={colors.primary} />
-          <Text style={styles.addPhotoText}>新增照片</Text>
+        <TouchableOpacity style={styles.addPhoto} onPress={pickImage} disabled={uploading}>
+          <MaterialCommunityIcons
+            name={uploading ? "loading" : "camera-plus"}
+            size={32}
+            color={uploading ? colors.textSecondary : colors.primary}
+          />
+          <Text style={styles.addPhotoText}>{uploading ? "上傳中..." : "新增照片"}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -166,7 +254,7 @@ export default function ProfileScreen() {
       <Text style={styles.label}>品種</Text>
       <TouchableOpacity onPress={() => setShowBreeds(!showBreeds)}>
         <TextInput
-          label="選擇品種"
+          label="選擇或輸入品種"
           value={breed}
           editable={false}
           style={styles.input}
@@ -182,7 +270,12 @@ export default function ProfileScreen() {
               key={b}
               selected={breed === b}
               onPress={() => {
-                setBreed(b);
+                if (breed === b) {
+                  setBreed("");
+                } else {
+                  setBreed(b);
+                  setCustomBreed("");
+                }
                 setShowBreeds(false);
               }}
               style={[styles.breedChip, breed === b && styles.selectedChip]}
@@ -193,10 +286,23 @@ export default function ProfileScreen() {
           ))}
         </View>
       )}
+      <TextInput
+        label="自行輸入品種"
+        value={customBreed}
+        onChangeText={(v) => {
+          setCustomBreed(v);
+          setBreed(v);
+        }}
+        style={styles.input}
+        mode="outlined"
+        outlineColor={colors.border}
+        activeOutlineColor={colors.primary}
+        placeholder="如果上面沒有，在這裡輸入"
+      />
 
       {/* Age */}
       <TextInput
-        label="年齡（月）"
+        label="年齡"
         value={ageMonths}
         onChangeText={setAgeMonths}
         keyboardType="numeric"
@@ -244,19 +350,60 @@ export default function ProfileScreen() {
             {tag}
           </Chip>
         ))}
+        {/* Show custom tags that aren't in the preset list */}
+        {personality
+          .filter((t) => !(PERSONALITY_OPTIONS as readonly string[]).includes(t))
+          .map((tag) => (
+            <Chip
+              key={tag}
+              selected
+              onPress={() => togglePersonality(tag)}
+              style={styles.selectedChip}
+              textStyle={styles.selectedChipText}
+              closeIcon="close"
+              onClose={() => togglePersonality(tag)}
+            >
+              {tag}
+            </Chip>
+          ))}
+      </View>
+      <View style={styles.customTagRow}>
+        <TextInput
+          label="自訂標籤"
+          value={customTag}
+          onChangeText={setCustomTag}
+          style={styles.customTagInput}
+          mode="outlined"
+          outlineColor={colors.border}
+          activeOutlineColor={colors.primary}
+          dense
+          onSubmitEditing={addCustomTag}
+          placeholder="輸入後按新增"
+        />
+        <Button
+          mode="contained"
+          buttonColor={colors.primary}
+          onPress={addCustomTag}
+          disabled={!customTag.trim() || personality.length >= 5}
+          compact
+          style={styles.addTagBtn}
+        >
+          新增
+        </Button>
       </View>
 
       {/* Bio */}
+      <Text style={styles.label}>自我介紹</Text>
       <TextInput
-        label="自我介紹"
         value={bio}
         onChangeText={setBio}
         multiline
-        numberOfLines={3}
-        style={styles.input}
+        numberOfLines={4}
+        style={[styles.input, styles.bioInput]}
         mode="outlined"
         outlineColor={colors.border}
         activeOutlineColor={colors.primary}
+        placeholder="介紹一下你的狗狗吧..."
       />
 
       <Button
@@ -311,14 +458,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     marginBottom: spacing.sm,
   },
+  bioInput: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
   photoRow: {
     marginBottom: spacing.md,
+  },
+  photoWrapper: {
+    position: "relative",
+    marginRight: spacing.sm,
   },
   photo: {
     width: 100,
     height: 100,
     borderRadius: 16,
-    marginRight: spacing.sm,
+  },
+  removePhoto: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: colors.surface,
+    borderRadius: 11,
   },
   addPhoto: {
     width: 100,
@@ -348,7 +509,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   tagChip: {
     backgroundColor: colors.surface,
@@ -358,6 +519,20 @@ const styles = StyleSheet.create({
   },
   selectedChipText: {
     color: "#FFF",
+  },
+  customTagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  customTagInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  addTagBtn: {
+    borderRadius: 12,
+    marginTop: 4,
   },
   segment: {
     marginBottom: spacing.sm,
