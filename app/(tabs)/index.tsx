@@ -72,12 +72,13 @@ export default function ExploreScreen() {
     if (myDog) fetchCandidates(myDog.id, myDog);
   }, [myDog]);
 
-  // Auto-refetch when candidates run low
+  // Auto-refetch when candidates run out
   useEffect(() => {
-    if (myDog && candidates.length > 0 && candidates.length <= 3 && !loadingCandidates) {
-      fetchCandidates(myDog.id, myDog);
+    if (myDog && candidates.length === 0 && !loadingCandidates) {
+      const timer = setTimeout(() => fetchCandidates(myDog.id, myDog), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [candidates.length]);
+  }, [candidates.length, loadingCandidates]);
 
   // Preload next candidate images
   useEffect(() => {

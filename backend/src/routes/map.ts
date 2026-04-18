@@ -36,7 +36,11 @@ router.get("/nearby-dogs", async (req: Request, res: Response) => {
     return;
   }
 
-  res.json(data);
+  const filtered = (data ?? []).filter(
+    (d: { owner_id: string }) => d.owner_id !== req.userId
+  );
+
+  res.json(filtered);
 });
 
 export default router;
