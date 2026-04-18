@@ -32,7 +32,10 @@ router.post("/", async (req: Request, res: Response) => {
 
   const { error: swipeError } = await supabaseAdmin
     .from("swipes")
-    .insert({ swiper_dog_id, swiped_dog_id, direction });
+    .upsert(
+      { swiper_dog_id, swiped_dog_id, direction },
+      { onConflict: "swiper_dog_id,swiped_dog_id" }
+    );
 
   if (swipeError) {
     res.status(400).json({ error: swipeError.message });

@@ -1,25 +1,38 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing } from "../../../constants/theme";
 
-export default function DogLayout() {
+function BackButton() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
 
+  const handleBack = () => {
+    if (from === "map") {
+      router.replace("/(tabs)/map");
+    } else {
+      router.back();
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handleBack}
+      style={{ marginRight: spacing.sm, padding: 4 }}
+    >
+      <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+    </TouchableOpacity>
+  );
+}
+
+export default function DogLayout() {
   return (
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
         headerShadowVisible: false,
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ marginRight: spacing.sm, padding: 4 }}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
-        ),
+        headerLeft: () => <BackButton />,
       }}
     >
       <Stack.Screen name="[id]" options={{ title: "狗狗檔案" }} />

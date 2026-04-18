@@ -221,7 +221,7 @@ export default function MapScreen() {
               <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.7}
-                onPress={() => router.push(`/(tabs)/dog/${item.id}`)}
+                onPress={() => router.push(`/(tabs)/dog/${item.id}?from=map`)}
               >
                 <LinearGradient
                   colors={["rgba(255,140,105,0.06)", "rgba(255,209,102,0.04)"]}

@@ -282,15 +282,18 @@ export default function DogProfileScreen() {
               </Button>
             )}
             {relation === "liked" && (
-              <Button
-                mode="outlined"
-                textColor={colors.textSecondary}
-                style={styles.likedBtn}
-                icon="heart-half-full"
-                disabled
-              >
-                已送出邀請
-              </Button>
+              <>
+                <Button
+                  mode="outlined"
+                  textColor={colors.textSecondary}
+                  style={styles.likedBtn}
+                  icon="heart-half-full"
+                  disabled
+                >
+                  已按讚
+                </Button>
+                <Text style={styles.hintText}>對方也按讚後將自動成為好友</Text>
+              </>
             )}
             {relation === "matched" && (
               <Button
@@ -479,6 +482,11 @@ const styles = StyleSheet.create({
   likedBtn: {
     borderColor: colors.textSecondary,
     borderRadius: 25,
+  },
+  hintText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: "center",
   },
   dangerBtn: {
     borderColor: colors.accent,
