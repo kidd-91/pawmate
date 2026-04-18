@@ -17,7 +17,6 @@ import { useAuthStore } from "../../../stores/authStore";
 import { useWalkGroupStore } from "../../../stores/walkGroupStore";
 import { WALKING_TIME_OPTIONS } from "../../../types";
 import PawBackground from "../../../components/PawBackground";
-import CalendarPicker from "../../../components/CalendarPicker";
 
 const TIME_LABELS: Record<string, string> = {
   morning: "🌅 早上",
@@ -304,11 +303,31 @@ export default function WalkGroupDetailScreen() {
                 />
 
                 <Text style={styles.editSectionLabel}>📅 日期</Text>
-                <CalendarPicker
-                  selected={editDate}
-                  onSelect={setEditDate}
-                  maxDate={(() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })()}
-                />
+                <View style={styles.dateGrid}>
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + i);
+                    const dateStr = d.toISOString().split("T")[0];
+                    const days = ["日", "一", "二", "三", "四", "五", "六"];
+                    let label = `${d.getMonth() + 1}/${d.getDate()} 週${days[d.getDay()]}`;
+                    if (i === 0) label = "今天";
+                    if (i === 1) label = "明天";
+                    return { value: dateStr, label };
+                  }).map((opt) => (
+                    <Chip
+                      key={opt.value}
+                      selected={editDate === opt.value}
+                      onPress={() => setEditDate(opt.value)}
+                      style={[
+                        styles.dateChip,
+                        editDate === opt.value && styles.selectedChip,
+                      ]}
+                      textStyle={editDate === opt.value ? styles.selectedChipText : undefined}
+                    >
+                      {opt.label}
+                    </Chip>
+                  ))}
+                </View>
 
                 <Text style={[styles.editSectionLabel, { marginTop: spacing.md }]}>🕐 時段</Text>
                 <SegmentedButtons
@@ -588,6 +607,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,140,105,0.12)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  dateGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  dateChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedChip: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectedChipText: {
+    color: "#FFF",
   },
   editSectionLabel: {
     fontSize: 14,

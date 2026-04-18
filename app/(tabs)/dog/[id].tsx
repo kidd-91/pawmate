@@ -334,7 +334,9 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     width: "100%",
-    height: width * 0.9,
+    maxWidth: 500,
+    aspectRatio: 1,
+    alignSelf: "center",
     position: "relative",
   },
   mainPhoto: {
@@ -384,6 +386,9 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     padding: spacing.lg,
+    maxWidth: 500,
+    width: "100%",
+    alignSelf: "center",
   },
   nameRow: {
     flexDirection: "row",

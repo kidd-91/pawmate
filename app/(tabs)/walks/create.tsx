@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
-import { Text, TextInput, Button, SegmentedButtons } from "react-native-paper";
+import { Text, TextInput, Button, Chip, SegmentedButtons } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useWalkGroupStore } from "../../../stores/walkGroupStore";
 import { WALKING_TIME_OPTIONS } from "../../../types";
-import CalendarPicker from "../../../components/CalendarPicker";
 
 export default function CreateWalkScreen() {
   const { session, myDog } = useAuthStore();
@@ -29,11 +28,16 @@ export default function CreateWalkScreen() {
   const [maxMembers, setMaxMembers] = useState("5");
   const [saving, setSaving] = useState(false);
 
-  const maxDate = (() => {
+  const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split("T")[0];
-  })();
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    const days = ["日", "一", "二", "三", "四", "五", "六"];
+    let label = `${d.getMonth() + 1}/${d.getDate()} 週${days[d.getDay()]}`;
+    if (i === 0) label = "今天";
+    if (i === 1) label = "明天";
+    return { value: dateStr, label };
+  });
 
   const handleCreate = async () => {
     if (!session?.user?.id || !myDog) return;
@@ -88,7 +92,22 @@ export default function CreateWalkScreen() {
         />
 
         <Text style={styles.label}>📅 日期</Text>
-        <CalendarPicker selected={walkDate} onSelect={setWalkDate} maxDate={maxDate} />
+        <View style={styles.dateGrid}>
+          {dateOptions.map((opt) => (
+            <Chip
+              key={opt.value}
+              selected={walkDate === opt.value}
+              onPress={() => setWalkDate(opt.value)}
+              style={[
+                styles.dateChip,
+                walkDate === opt.value && styles.selectedChip,
+              ]}
+              textStyle={walkDate === opt.value ? styles.selectedChipText : undefined}
+            >
+              {opt.label}
+            </Chip>
+          ))}
+        </View>
 
         <Text style={styles.label}>🕐 時段</Text>
         <SegmentedButtons
@@ -176,6 +195,24 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 80,
     textAlignVertical: "top",
+  },
+  dateGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  dateChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedChip: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectedChipText: {
+    color: "#FFF",
   },
   segment: {
     marginBottom: spacing.sm,
