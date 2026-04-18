@@ -118,7 +118,7 @@ export default function MatchesScreen() {
             <TouchableOpacity
               style={styles.card}
               activeOpacity={0.7}
-              onPress={() => router.push(`/(tabs)/dog/${otherDog.id}`)}
+              onPress={() => router.push(`/(tabs)/dog/${otherDog.id}?from=matches`)}
             >
               <LinearGradient
                 colors={["rgba(255,140,105,0.08)", "rgba(255,209,102,0.05)"]}

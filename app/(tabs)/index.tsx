@@ -72,13 +72,7 @@ export default function ExploreScreen() {
     if (myDog) fetchCandidates(myDog.id, myDog);
   }, [myDog]);
 
-  // Auto-refetch when candidates run out
-  useEffect(() => {
-    if (myDog && candidates.length === 0 && !loadingCandidates) {
-      const timer = setTimeout(() => fetchCandidates(myDog.id, myDog), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [candidates.length, loadingCandidates]);
+  // No auto-refetch — user must press "重新搜尋" manually
 
   // Preload next candidate images
   useEffect(() => {
@@ -206,7 +200,7 @@ export default function ExploreScreen() {
             {loadingCandidates ? "尋找狗狗中..." : "附近暫時沒有新狗狗"}
           </Text>
           <Text style={styles.emptyText}>
-            {loadingCandidates ? "正在搜尋附近的狗狗朋友..." : "試試開無痕視窗\n用另一個帳號建立狗狗吧！"}
+            {loadingCandidates ? "正在搜尋附近的狗狗朋友..." : "目前沒有新的狗狗了\n過一陣子再來看看吧！"}
           </Text>
           {!loadingCandidates && (
             <Button

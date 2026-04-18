@@ -43,7 +43,7 @@ export default function ChatRoomScreen() {
         headerTitle: () => (
           <TouchableOpacity
             style={styles.headerRow}
-            onPress={() => router.push(`/(tabs)/dog/${otherDog.id}`)}
+            onPress={() => router.push(`/(tabs)/dog/${otherDog.id}?from=chat`)}
             activeOpacity={0.7}
           >
             <Image

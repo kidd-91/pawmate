@@ -30,16 +30,27 @@ router.get("/check", async (req: Request, res: Response) => {
 router.post("/", async (req: Request, res: Response) => {
   const { swiper_dog_id, swiped_dog_id, direction } = req.body;
 
-  const { error: swipeError } = await supabaseAdmin
+  const { data: existingSwipe } = await supabaseAdmin
     .from("swipes")
-    .upsert(
-      { swiper_dog_id, swiped_dog_id, direction },
-      { onConflict: "swiper_dog_id,swiped_dog_id" }
-    );
+    .select("id")
+    .eq("swiper_dog_id", swiper_dog_id)
+    .eq("swiped_dog_id", swiped_dog_id)
+    .maybeSingle();
 
-  if (swipeError) {
-    res.status(400).json({ error: swipeError.message });
-    return;
+  if (existingSwipe) {
+    await supabaseAdmin
+      .from("swipes")
+      .update({ direction })
+      .eq("id", existingSwipe.id);
+  } else {
+    const { error: swipeError } = await supabaseAdmin
+      .from("swipes")
+      .insert({ swiper_dog_id, swiped_dog_id, direction });
+
+    if (swipeError) {
+      res.status(400).json({ error: swipeError.message });
+      return;
+    }
   }
 
   if (direction !== "like") {

@@ -10,6 +10,10 @@ function BackButton() {
   const handleBack = () => {
     if (from === "map") {
       router.replace("/(tabs)/map");
+    } else if (from === "matches") {
+      router.replace("/(tabs)/matches");
+    } else if (from === "chat") {
+      router.replace("/(tabs)/chat");
     } else {
       router.back();
     }
