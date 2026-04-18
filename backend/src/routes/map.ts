@@ -8,10 +8,12 @@ router.use(authMiddleware);
 router.post("/update-location", async (req: Request, res: Response) => {
   const { lat, lng } = req.body;
 
-  const { error } = await supabaseAdmin.rpc("update_user_location", {
-    lat,
-    lng,
-  });
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      location: `SRID=4326;POINT(${lng} ${lat})`,
+    })
+    .eq("id", req.userId!);
 
   if (error) {
     res.status(400).json({ error: error.message });

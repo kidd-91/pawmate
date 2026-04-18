@@ -12,9 +12,41 @@ router.get("/mine", async (req: Request, res: Response) => {
     .eq("owner_id", req.userId!)
     .eq("is_active", true)
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  res.json(data);
+});
+
+router.get("/candidates/list", async (req: Request, res: Response) => {
+  const { dogId } = req.query;
+  if (!dogId) {
+    res.status(400).json({ error: "dogId required" });
+    return;
+  }
+
+  const { data: swipedDogs } = await supabaseAdmin
+    .from("swipes")
+    .select("swiped_dog_id")
+    .eq("swiper_dog_id", dogId as string);
+
+  const excludeIds = [
+    dogId as string,
+    ...(swipedDogs?.map((s) => s.swiped_dog_id) ?? []),
+  ];
+
+  const { data, error } = await supabaseAdmin
+    .from("dogs")
+    .select("*, owner:profiles(*)")
+    .eq("is_active", true)
+    .not("id", "in", `(${excludeIds.join(",")})`)
+    .limit(20);
+
+  if (error) {
     res.status(400).json({ error: error.message });
     return;
   }
@@ -72,38 +104,6 @@ router.put("/:id", async (req: Request, res: Response) => {
     .eq("id", req.params.id)
     .select()
     .single();
-
-  if (error) {
-    res.status(400).json({ error: error.message });
-    return;
-  }
-
-  res.json(data);
-});
-
-router.get("/candidates/list", async (req: Request, res: Response) => {
-  const { dogId } = req.query;
-  if (!dogId) {
-    res.status(400).json({ error: "dogId required" });
-    return;
-  }
-
-  const { data: swipedDogs } = await supabaseAdmin
-    .from("swipes")
-    .select("swiped_dog_id")
-    .eq("swiper_dog_id", dogId as string);
-
-  const excludeIds = [
-    dogId as string,
-    ...(swipedDogs?.map((s) => s.swiped_dog_id) ?? []),
-  ];
-
-  const { data, error } = await supabaseAdmin
-    .from("dogs")
-    .select("*, owner:profiles(*)")
-    .eq("is_active", true)
-    .not("id", "in", `(${excludeIds.join(",")})`)
-    .limit(20);
 
   if (error) {
     res.status(400).json({ error: error.message });
