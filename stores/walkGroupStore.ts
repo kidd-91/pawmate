@@ -26,6 +26,14 @@ interface WalkGroupState {
     notes: string;
     max_members: number;
   }) => Promise<WalkGroup | null>;
+  updateGroup: (groupId: string, updates: Partial<{
+    title: string;
+    location: string;
+    walk_date: string;
+    walk_time: string;
+    notes: string;
+    max_members: number;
+  }>) => Promise<WalkGroup | null>;
   joinGroup: (groupId: string, userId: string, dogId: string) => Promise<boolean>;
   leaveGroup: (groupId: string, userId: string) => Promise<void>;
   fetchMembers: (groupId: string) => Promise<void>;
@@ -61,6 +69,16 @@ export const useWalkGroupStore = create<WalkGroupState>((set, get) => ({
         set({ currentGroup: data, members: data.members ?? [] });
       }
     } catch {}
+  },
+
+  updateGroup: async (groupId, updates) => {
+    try {
+      const data = await api.put<WalkGroup>(`/api/walks/${groupId}`, updates);
+      if (data) set({ currentGroup: data });
+      return data ?? null;
+    } catch {
+      return null;
+    }
   },
 
   createGroup: async (groupData) => {

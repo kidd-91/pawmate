@@ -9,13 +9,15 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Text, TextInput, Button, Chip } from "react-native-paper";
+import { Text, TextInput, Button, Chip, SegmentedButtons } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useWalkGroupStore } from "../../../stores/walkGroupStore";
+import { WALKING_TIME_OPTIONS } from "../../../types";
 import PawBackground from "../../../components/PawBackground";
+import CalendarPicker from "../../../components/CalendarPicker";
 
 const TIME_LABELS: Record<string, string> = {
   morning: "🌅 早上",
@@ -38,10 +40,19 @@ export default function WalkGroupDetailScreen() {
     sendMessage,
     subscribeToMessages,
     unsubscribe,
+    updateGroup,
   } = useWalkGroupStore();
   const navigation = useNavigation();
   const [text, setText] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("morning");
+  const [editNotes, setEditNotes] = useState("");
+  const [editMaxMembers, setEditMaxMembers] = useState("5");
+  const [savingEdit, setSavingEdit] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const isCreator = currentGroup?.creator_id === session?.user?.id;
@@ -74,6 +85,40 @@ export default function WalkGroupDetailScreen() {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages.length]);
+
+  const startEditing = () => {
+    if (!currentGroup) return;
+    setEditTitle(currentGroup.title);
+    setEditLocation(currentGroup.location);
+    setEditDate(currentGroup.walk_date);
+    setEditTime(currentGroup.walk_time);
+    setEditNotes(currentGroup.notes || "");
+    setEditMaxMembers(String(currentGroup.max_members));
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!groupId || !editTitle.trim() || !editLocation.trim() || !editDate) {
+      Alert.alert("請填寫完整", "標題、地點和日期為必填");
+      return;
+    }
+    setSavingEdit(true);
+    const result = await updateGroup(groupId, {
+      title: editTitle.trim(),
+      location: editLocation.trim(),
+      walk_date: editDate,
+      walk_time: editTime,
+      notes: editNotes.trim(),
+      max_members: parseInt(editMaxMembers) || 5,
+    });
+    setSavingEdit(false);
+    if (result) {
+      setEditing(false);
+      fetchGroup(groupId);
+    } else {
+      Alert.alert("儲存失敗", "請稍後再試");
+    }
+  };
 
   const handleJoin = async () => {
     if (!groupId || !session?.user?.id || !myDog) return;
@@ -207,9 +252,97 @@ export default function WalkGroupDetailScreen() {
         renderItem={null}
         ListHeaderComponent={
           <View style={styles.detailContent}>
-            {/* Info card */}
+            {/* Info card or Edit form */}
+            {editing ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.editSectionLabel}>📝 標題</Text>
+                <TextInput
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                  style={styles.editInput}
+                  mode="outlined"
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+
+                <Text style={styles.editSectionLabel}>📍 地點</Text>
+                <TextInput
+                  value={editLocation}
+                  onChangeText={setEditLocation}
+                  style={styles.editInput}
+                  mode="outlined"
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+
+                <Text style={styles.editSectionLabel}>📅 日期</Text>
+                <CalendarPicker selected={editDate} onSelect={setEditDate} />
+
+                <Text style={[styles.editSectionLabel, { marginTop: spacing.md }]}>🕐 時段</Text>
+                <SegmentedButtons
+                  value={editTime}
+                  onValueChange={setEditTime}
+                  buttons={WALKING_TIME_OPTIONS.map((t) => ({
+                    value: t.value,
+                    label: t.label,
+                  }))}
+                  style={{ marginBottom: spacing.sm }}
+                />
+
+                <Text style={styles.editSectionLabel}>👥 人數上限</Text>
+                <TextInput
+                  value={editMaxMembers}
+                  onChangeText={setEditMaxMembers}
+                  keyboardType="numeric"
+                  style={styles.editInput}
+                  mode="outlined"
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+
+                <Text style={styles.editSectionLabel}>💬 備註</Text>
+                <TextInput
+                  value={editNotes}
+                  onChangeText={setEditNotes}
+                  multiline
+                  numberOfLines={3}
+                  style={[styles.editInput, { minHeight: 80, textAlignVertical: "top" }]}
+                  mode="outlined"
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                />
+
+                <View style={styles.editBtnRow}>
+                  <Button
+                    mode="outlined"
+                    textColor={colors.textSecondary}
+                    onPress={() => setEditing(false)}
+                    style={styles.editCancelBtn}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    mode="contained"
+                    buttonColor={colors.primary}
+                    onPress={handleSaveEdit}
+                    loading={savingEdit}
+                    disabled={savingEdit}
+                    style={styles.editSaveBtn}
+                  >
+                    儲存
+                  </Button>
+                </View>
+              </View>
+            ) : (
             <View style={styles.infoCard}>
-              <Text style={styles.groupTitle}>{currentGroup.title}</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.groupTitle}>{currentGroup.title}</Text>
+                {isCreator && (
+                  <TouchableOpacity onPress={startEditing} style={styles.editIconBtn}>
+                    <MaterialCommunityIcons name="pencil" size={18} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
 
               <View style={styles.infoRow}>
                 <MaterialCommunityIcons name="calendar" size={18} color={colors.primary} />
@@ -236,6 +369,7 @@ export default function WalkGroupDetailScreen() {
                 </View>
               ) : null}
             </View>
+            )}
 
             {/* Creator */}
             <View style={styles.sectionCard}>
@@ -356,11 +490,50 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
   groupTitle: {
     fontSize: 22,
     fontWeight: "bold",
     color: colors.text,
-    marginBottom: spacing.md,
+    flex: 1,
+  },
+  editIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,140,105,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editSectionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  editInput: {
+    backgroundColor: colors.surface,
+    marginBottom: spacing.xs,
+  },
+  editBtnRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  editCancelBtn: {
+    flex: 1,
+    borderRadius: 25,
+    borderColor: colors.border,
+  },
+  editSaveBtn: {
+    flex: 1,
+    borderRadius: 25,
   },
   infoRow: {
     flexDirection: "row",

@@ -86,6 +86,35 @@ router.post("/", async (req: Request, res: Response) => {
   res.json(data);
 });
 
+router.put("/:id", async (req: Request, res: Response) => {
+  const { data: group } = await supabaseAdmin
+    .from("walk_groups")
+    .select("creator_id")
+    .eq("id", req.params.id)
+    .single();
+
+  if (group?.creator_id !== req.userId) {
+    res.status(403).json({ error: "只有發起人可以編輯" });
+    return;
+  }
+
+  const { title, location, walk_date, walk_time, notes, max_members } = req.body;
+
+  const { data, error } = await supabaseAdmin
+    .from("walk_groups")
+    .update({ title, location, walk_date, walk_time, notes, max_members })
+    .eq("id", req.params.id)
+    .select("*")
+    .single();
+
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  res.json(data);
+});
+
 router.post("/:id/join", async (req: Request, res: Response) => {
   const { dog_id } = req.body;
 
