@@ -276,7 +276,11 @@ export default function WalkGroupDetailScreen() {
                 />
 
                 <Text style={styles.editSectionLabel}>📅 日期</Text>
-                <CalendarPicker selected={editDate} onSelect={setEditDate} />
+                <CalendarPicker
+                  selected={editDate}
+                  onSelect={setEditDate}
+                  maxDate={(() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })()}
+                />
 
                 <Text style={[styles.editSectionLabel, { marginTop: spacing.md }]}>🕐 時段</Text>
                 <SegmentedButtons

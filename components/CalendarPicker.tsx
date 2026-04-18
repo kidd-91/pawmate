@@ -8,17 +8,21 @@ interface CalendarPickerProps {
   selected: string;
   onSelect: (date: string) => void;
   minDate?: string;
+  maxDate?: string;
 }
 
 const DAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
-export default function CalendarPicker({ selected, onSelect, minDate }: CalendarPickerProps) {
+export default function CalendarPicker({ selected, onSelect, minDate, maxDate }: CalendarPickerProps) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const min = minDate ? new Date(minDate + "T00:00:00") : today;
   min.setHours(0, 0, 0, 0);
+
+  const max = maxDate ? new Date(maxDate + "T00:00:00") : null;
+  if (max) max.setHours(23, 59, 59, 999);
 
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -46,6 +50,7 @@ export default function CalendarPicker({ selected, onSelect, minDate }: Calendar
   };
 
   const canGoPrev = new Date(viewYear, viewMonth, 1) > min;
+  const canGoNext = !max || new Date(viewYear, viewMonth + 1, 1) <= max;
 
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -64,8 +69,8 @@ export default function CalendarPicker({ selected, onSelect, minDate }: Calendar
         <Text style={styles.monthLabel}>
           {viewYear} 年 {viewMonth + 1} 月
         </Text>
-        <TouchableOpacity onPress={goToNext} style={styles.navBtn}>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={colors.text} />
+        <TouchableOpacity onPress={goToNext} disabled={!canGoNext} style={styles.navBtn}>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={canGoNext ? colors.text : colors.border} />
         </TouchableOpacity>
       </View>
 
@@ -83,7 +88,7 @@ export default function CalendarPicker({ selected, onSelect, minDate }: Calendar
 
           const dateStr = toDateStr(viewYear, viewMonth, day);
           const dateObj = new Date(viewYear, viewMonth, day);
-          const isPast = dateObj < min;
+          const isPast = dateObj < min || (max !== null && dateObj > max);
           const isSelected = dateStr === selected;
           const isToday = dateStr === toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
 

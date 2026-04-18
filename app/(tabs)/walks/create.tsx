@@ -29,6 +29,12 @@ export default function CreateWalkScreen() {
   const [maxMembers, setMaxMembers] = useState("5");
   const [saving, setSaving] = useState(false);
 
+  const maxDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split("T")[0];
+  })();
+
   const handleCreate = async () => {
     if (!session?.user?.id || !myDog) return;
     if (!title.trim() || !location.trim() || !walkDate) {
@@ -82,7 +88,7 @@ export default function CreateWalkScreen() {
         />
 
         <Text style={styles.label}>📅 日期</Text>
-        <CalendarPicker selected={walkDate} onSelect={setWalkDate} />
+        <CalendarPicker selected={walkDate} onSelect={setWalkDate} maxDate={maxDate} />
 
         <Text style={styles.label}>🕐 時段</Text>
         <SegmentedButtons
