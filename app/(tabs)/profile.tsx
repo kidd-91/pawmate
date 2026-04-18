@@ -149,7 +149,7 @@ export default function ProfileScreen() {
             const { data: publicUrl } = supabase.storage
               .from("dog-photos")
               .getPublicUrl(data.path);
-            setPhotos((prev) => [...prev, publicUrl.publicUrl]);
+            setPhotos([publicUrl.publicUrl]);
           }
         } else {
           // Fallback: fetch URI as blob
@@ -174,7 +174,7 @@ export default function ProfileScreen() {
             const { data: publicUrl } = supabase.storage
               .from("dog-photos")
               .getPublicUrl(data.path);
-            setPhotos((prev) => [...prev, publicUrl.publicUrl]);
+            setPhotos([publicUrl.publicUrl]);
           }
         }
       } catch (e: any) {
@@ -183,10 +183,6 @@ export default function ProfileScreen() {
 
       setUploading(false);
     }
-  };
-
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const togglePersonality = (tag: string) => {
@@ -340,27 +336,30 @@ export default function ProfileScreen() {
       {/* Photos */}
       <View style={styles.formCard}>
       <Text style={styles.label}>📷 照片</Text>
-      <ScrollView horizontal style={styles.photoRow} showsHorizontalScrollIndicator={false}>
-        {photos.map((uri, i) => (
-          <View key={i} style={styles.photoWrapper}>
-            <Image source={{ uri }} style={styles.photo} />
+      <View style={styles.photoSection}>
+        {photos.length > 0 ? (
+          <View style={styles.photoWrapper}>
+            <Image source={{ uri: photos[0] }} style={styles.photo} />
             <TouchableOpacity
-              style={styles.removePhoto}
-              onPress={() => removePhoto(i)}
+              style={styles.changePhotoBtn}
+              onPress={pickImage}
+              disabled={uploading}
             >
-              <MaterialCommunityIcons name="close-circle" size={22} color={colors.accent} />
+              <MaterialCommunityIcons name="camera" size={16} color="#FFF" />
+              <Text style={styles.changePhotoText}>{uploading ? "上傳中..." : "更換照片"}</Text>
             </TouchableOpacity>
           </View>
-        ))}
-        <TouchableOpacity style={styles.addPhoto} onPress={pickImage} disabled={uploading}>
-          <MaterialCommunityIcons
-            name={uploading ? "loading" : "camera-plus"}
-            size={32}
-            color={uploading ? colors.textSecondary : colors.primary}
-          />
-          <Text style={styles.addPhotoText}>{uploading ? "上傳中..." : "新增照片"}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        ) : (
+          <TouchableOpacity style={styles.addPhoto} onPress={pickImage} disabled={uploading}>
+            <MaterialCommunityIcons
+              name={uploading ? "loading" : "camera-plus"}
+              size={32}
+              color={uploading ? colors.textSecondary : colors.primary}
+            />
+            <Text style={styles.addPhotoText}>{uploading ? "上傳中..." : "新增照片"}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Name */}
       <TextInput
@@ -949,29 +948,41 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: "top",
   },
-  photoRow: {
+  photoSection: {
     marginBottom: spacing.md,
+    alignItems: "center",
   },
   photoWrapper: {
     position: "relative",
-    marginRight: spacing.sm,
   },
   photo: {
-    width: 100,
-    height: 100,
-    borderRadius: 16,
+    width: 140,
+    height: 140,
+    borderRadius: 20,
   },
-  removePhoto: {
+  changePhotoBtn: {
     position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: colors.surface,
-    borderRadius: 11,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    paddingVertical: 6,
+  },
+  changePhotoText: {
+    fontSize: 12,
+    color: "#FFF",
+    fontWeight: "600",
   },
   addPhoto: {
-    width: 100,
-    height: 100,
-    borderRadius: 16,
+    width: 140,
+    height: 140,
+    borderRadius: 20,
     borderWidth: 2,
     borderStyle: "dashed",
     borderColor: colors.primary,
@@ -979,7 +990,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addPhotoText: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.primary,
     marginTop: 4,
   },
