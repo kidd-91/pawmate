@@ -5,6 +5,28 @@ import { authMiddleware } from "../middleware/auth";
 const router = Router();
 router.use(authMiddleware);
 
+router.get("/check", async (req: Request, res: Response) => {
+  const { swiperId, swipedId } = req.query;
+  if (!swiperId || !swipedId) {
+    res.status(400).json({ error: "swiperId and swipedId required" });
+    return;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("swipes")
+    .select("id")
+    .eq("swiper_dog_id", swiperId as string)
+    .eq("swiped_dog_id", swipedId as string)
+    .eq("direction", "like");
+
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  res.json(data ?? []);
+});
+
 router.post("/", async (req: Request, res: Response) => {
   const { swiper_dog_id, swiped_dog_id, direction } = req.body;
 

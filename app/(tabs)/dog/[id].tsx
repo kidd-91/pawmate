@@ -15,19 +15,28 @@ import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../../../constants/theme";
 import { api } from "../../../lib/api";
 import { useAuthStore } from "../../../stores/authStore";
-import type { Dog } from "../../../types";
+import { useMatchStore } from "../../../stores/matchStore";
+import type { Dog, Match } from "../../../types";
 
 const { width } = Dimensions.get("window");
+
+type RelationStatus = "none" | "liked" | "matched";
 
 export default function DogProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { myDog } = useAuthStore();
+  const { swipe } = useMatchStore();
   const router = useRouter();
   const [dog, setDog] = useState<Dog | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [relation, setRelation] = useState<RelationStatus>("none");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (id) fetchDog();
+    if (id) {
+      fetchDog();
+      if (myDog) checkRelation();
+    }
   }, [id]);
 
   const fetchDog = async () => {
@@ -35,6 +44,40 @@ export default function DogProfileScreen() {
       const data = await api.get<Dog>(`/api/dogs/${id}`);
       if (data) setDog(data);
     } catch {}
+  };
+
+  const checkRelation = async () => {
+    if (!myDog) return;
+    try {
+      const matches = await api.get<Match[]>(`/api/matches?dogId=${myDog.id}`);
+      const isMatched = (matches ?? []).some(
+        (m) => m.dog_a_id === id || m.dog_b_id === id
+      );
+      if (isMatched) {
+        setRelation("matched");
+        return;
+      }
+
+      const swipes = await api.get<{ id: string }[]>(
+        `/api/swipes/check?swiperId=${myDog.id}&swipedId=${id}`
+      );
+      if (swipes && swipes.length > 0) {
+        setRelation("liked");
+      }
+    } catch {}
+  };
+
+  const handleLike = async () => {
+    if (!myDog || !id) return;
+    setActionLoading(true);
+    const match = await swipe(myDog.id, id, "like");
+    if (match) {
+      setRelation("matched");
+      Alert.alert("配對成功！🎉", "你們互相喜歡！可以開始聊天了");
+    } else {
+      setRelation("liked");
+    }
+    setActionLoading(false);
   };
 
   const handleUnmatch = async () => {
@@ -49,6 +92,7 @@ export default function DogProfileScreen() {
             await api.delete(`/api/matches/${id}`, { dogAId: myDog.id, dogBId: id });
             await api.delete("/api/swipes/between", { dogAId: myDog.id, dogBId: id });
           } catch {}
+          setRelation("none");
           router.back();
         },
       },
@@ -223,15 +267,42 @@ export default function DogProfileScreen() {
         {/* Actions */}
         {myDog && myDog.id !== id && (
           <View style={styles.actionSection}>
-            <Button
-              mode="outlined"
-              textColor={colors.accent}
-              style={styles.dangerBtn}
-              onPress={handleUnmatch}
-              icon="heart-broken"
-            >
-              解除好友
-            </Button>
+            {relation === "none" && (
+              <Button
+                mode="contained"
+                buttonColor={colors.primary}
+                textColor="#FFF"
+                style={styles.likeBtn}
+                onPress={handleLike}
+                icon="heart"
+                loading={actionLoading}
+                disabled={actionLoading}
+              >
+                加好友
+              </Button>
+            )}
+            {relation === "liked" && (
+              <Button
+                mode="outlined"
+                textColor={colors.textSecondary}
+                style={styles.likedBtn}
+                icon="heart-half-full"
+                disabled
+              >
+                已送出邀請
+              </Button>
+            )}
+            {relation === "matched" && (
+              <Button
+                mode="outlined"
+                textColor={colors.accent}
+                style={styles.dangerBtn}
+                onPress={handleUnmatch}
+                icon="heart-broken"
+              >
+                解除好友
+              </Button>
+            )}
             <Button
               mode="text"
               textColor={colors.textSecondary}
@@ -401,6 +472,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     alignItems: "center",
     gap: spacing.sm,
+  },
+  likeBtn: {
+    borderRadius: 25,
+  },
+  likedBtn: {
+    borderColor: colors.textSecondary,
+    borderRadius: 25,
   },
   dangerBtn: {
     borderColor: colors.accent,

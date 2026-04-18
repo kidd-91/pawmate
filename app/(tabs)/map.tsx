@@ -12,9 +12,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useRouter, useFocusEffect } from "expo-router";
+import { Alert } from "react-native";
 import { colors, spacing } from "../../constants/theme";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
+import { useMatchStore } from "../../stores/matchStore";
 import PawBackground from "../../components/PawBackground";
 
 interface NearbyDog {
@@ -32,7 +34,7 @@ interface NearbyDog {
   photos: string[];
   is_active: boolean;
   created_at: string;
-  distance_km: number;
+  distance_km?: number;
   owner_name: string;
 }
 
@@ -116,9 +118,22 @@ export default function MapScreen() {
     }
   };
 
-  const formatDistance = (km: number) => {
+  const formatDistance = (km: number | undefined | null) => {
+    if (km == null) return null;
     if (km < 1) return `${Math.round(km * 1000)}m`;
-    return `${km}km`;
+    return `${km.toFixed(1)}km`;
+  };
+
+  const { swipe } = useMatchStore();
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+
+  const handleLike = async (targetDogId: string) => {
+    if (!myDog) return;
+    setLikedIds((prev) => new Set(prev).add(targetDogId));
+    const match = await swipe(myDog.id, targetDogId, "like");
+    if (match) {
+      Alert.alert("配對成功！🎉", "你們互相喜歡！可以開始聊天了");
+    }
   };
 
   if (errorMsg) {
@@ -227,10 +242,12 @@ export default function MapScreen() {
                 <View style={styles.cardInfo}>
                   <View style={styles.nameRow}>
                     <Text style={styles.dogName}>{item.name}</Text>
-                    <View style={styles.distanceBadge}>
-                      <MaterialCommunityIcons name="map-marker" size={12} color={colors.primary} />
-                      <Text style={styles.distanceText}>{formatDistance(item.distance_km)}</Text>
-                    </View>
+                    {formatDistance(item.distance_km) && (
+                      <View style={styles.distanceBadge}>
+                        <MaterialCommunityIcons name="map-marker" size={12} color={colors.primary} />
+                        <Text style={styles.distanceText}>{formatDistance(item.distance_km)}</Text>
+                      </View>
+                    )}
                   </View>
 
                   <Text style={styles.breed}>
@@ -259,7 +276,20 @@ export default function MapScreen() {
                   </View>
                 </View>
 
-                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} style={styles.chevron} />
+                <TouchableOpacity
+                  style={[styles.likeBtn, likedIds.has(item.id) && styles.likeBtnActive]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (!likedIds.has(item.id)) handleLike(item.id);
+                  }}
+                  disabled={likedIds.has(item.id)}
+                >
+                  <MaterialCommunityIcons
+                    name={likedIds.has(item.id) ? "heart" : "heart-outline"}
+                    size={22}
+                    color={likedIds.has(item.id) ? "#FFF" : colors.primary}
+                  />
+                </TouchableOpacity>
               </TouchableOpacity>
             );
           }}
@@ -407,8 +437,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
   },
-  chevron: {
+  likeBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,140,105,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: spacing.xs,
+  },
+  likeBtnActive: {
+    backgroundColor: colors.primary,
   },
   // Empty states
   emptyContainer: {
