@@ -36,6 +36,8 @@ export default function WalkGroupDetailScreen() {
     fetchMembers,
     fetchMessages,
     joinGroup,
+    approveJoin,
+    rejectJoin,
     leaveGroup,
     sendMessage,
     subscribeToMessages,
@@ -56,8 +58,12 @@ export default function WalkGroupDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   const isCreator = currentGroup?.creator_id === session?.user?.id;
-  const isMember = members.some((m) => m.user_id === session?.user?.id);
-  const canJoin = !isCreator && !isMember && (currentGroup?.member_count ?? 1) < (currentGroup?.max_members ?? 5);
+  const myMembership = members.find((m) => m.user_id === session?.user?.id);
+  const isMember = myMembership?.status === "approved";
+  const isPending = myMembership?.status === "pending";
+  const approvedMembers = members.filter((m) => m.status === "approved");
+  const pendingMembers = members.filter((m) => m.status === "pending");
+  const canJoin = !isCreator && !myMembership && (approvedMembers.length + 1) < (currentGroup?.max_members ?? 5);
 
   useEffect(() => {
     if (groupId) {
@@ -122,8 +128,30 @@ export default function WalkGroupDetailScreen() {
 
   const handleJoin = async () => {
     if (!groupId || !session?.user?.id || !myDog) return;
-    const ok = await joinGroup(groupId, session.user.id, myDog.id);
-    if (ok) Alert.alert("加入成功！", "你已加入揪團，快來群聊認識大家吧！");
+    const status = await joinGroup(groupId, session.user.id, myDog.id);
+    if (status === "pending") {
+      Alert.alert("已送出申請", "等待發起人審核後即可加入！");
+      fetchGroup(groupId);
+    } else if (status === "approved") {
+      Alert.alert("加入成功！", "你已加入揪團！");
+    }
+  };
+
+  const handleApprove = async (memberId: string) => {
+    if (!groupId) return;
+    await approveJoin(groupId, memberId);
+  };
+
+  const handleReject = async (memberId: string) => {
+    if (!groupId) return;
+    Alert.alert("拒絕申請", "確定要拒絕此申請嗎？", [
+      { text: "取消", style: "cancel" },
+      {
+        text: "拒絕",
+        style: "destructive",
+        onPress: () => rejectJoin(groupId, memberId),
+      },
+    ]);
   };
 
   const handleLeave = () => {
@@ -362,7 +390,7 @@ export default function WalkGroupDetailScreen() {
               <View style={styles.infoRow}>
                 <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
                 <Text style={styles.infoText}>
-                  {(members.length + 1)}/{currentGroup.max_members} 位參加者
+                  {(approvedMembers.length + 1)}/{currentGroup.max_members} 位參加者
                 </Text>
               </View>
 
@@ -398,11 +426,11 @@ export default function WalkGroupDetailScreen() {
               </View>
             </View>
 
-            {/* Members */}
-            {members.length > 0 && (
+            {/* Approved Members */}
+            {approvedMembers.length > 0 && (
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionTitle}>參加者</Text>
-                {members.map((m) => (
+                {approvedMembers.map((m) => (
                   <View key={m.id} style={styles.memberRow}>
                     {m.dog?.photos?.[0] ? (
                       <Image source={{ uri: m.dog.photos[0] }} style={styles.memberAvatar} />
@@ -411,12 +439,48 @@ export default function WalkGroupDetailScreen() {
                         <Text style={{ fontSize: 20 }}>🐶</Text>
                       </View>
                     )}
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.memberName}>{m.dog?.name}</Text>
                       <Text style={styles.memberOwner}>
                         主人：{m.profile?.display_name}
                       </Text>
                     </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Pending Requests - only visible to creator */}
+            {isCreator && pendingMembers.length > 0 && (
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>待審核申請 ({pendingMembers.length})</Text>
+                {pendingMembers.map((m) => (
+                  <View key={m.id} style={styles.memberRow}>
+                    {m.dog?.photos?.[0] ? (
+                      <Image source={{ uri: m.dog.photos[0] }} style={styles.memberAvatar} />
+                    ) : (
+                      <View style={styles.memberAvatarPlaceholder}>
+                        <Text style={{ fontSize: 20 }}>🐶</Text>
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.memberName}>{m.dog?.name}</Text>
+                      <Text style={styles.memberOwner}>
+                        主人：{m.profile?.display_name}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.approveBtn}
+                      onPress={() => handleApprove(m.id)}
+                    >
+                      <MaterialCommunityIcons name="check" size={18} color="#FFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.rejectBtn}
+                      onPress={() => handleReject(m.id)}
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color="#FFF" />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -432,7 +496,18 @@ export default function WalkGroupDetailScreen() {
                   style={styles.actionBtn}
                   icon="paw"
                 >
-                  加入揪團
+                  申請加入
+                </Button>
+              )}
+              {isPending && (
+                <Button
+                  mode="outlined"
+                  textColor={colors.textSecondary}
+                  style={styles.actionBtn}
+                  icon="clock-outline"
+                  disabled
+                >
+                  等待審核中
                 </Button>
               )}
               {(isCreator || isMember) && (
@@ -619,6 +694,24 @@ const styles = StyleSheet.create({
   creatorBadge: {
     backgroundColor: colors.primary,
     marginLeft: "auto",
+  },
+  approveBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#4CAF50",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  rejectBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
   },
   actionRow: {
     gap: spacing.sm,

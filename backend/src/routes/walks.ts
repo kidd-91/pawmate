@@ -5,8 +5,42 @@ import { authMiddleware } from "../middleware/auth";
 const router = Router();
 router.use(authMiddleware);
 
+async function getFriendUserIds(userId: string): Promise<string[]> {
+  const { data: myDog } = await supabaseAdmin
+    .from("dogs")
+    .select("id")
+    .eq("owner_id", userId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!myDog) return [];
+
+  const { data: matchesA } = await supabaseAdmin
+    .from("matches")
+    .select("dog_b:dogs!matches_dog_b_id_fkey(owner_id)")
+    .eq("dog_a_id", myDog.id);
+
+  const { data: matchesB } = await supabaseAdmin
+    .from("matches")
+    .select("dog_a:dogs!matches_dog_a_id_fkey(owner_id)")
+    .eq("dog_b_id", myDog.id);
+
+  const friendIds = new Set<string>();
+  (matchesA ?? []).forEach((m: any) => {
+    if (m.dog_b?.owner_id) friendIds.add(m.dog_b.owner_id);
+  });
+  (matchesB ?? []).forEach((m: any) => {
+    if (m.dog_a?.owner_id) friendIds.add(m.dog_a.owner_id);
+  });
+
+  return Array.from(friendIds);
+}
+
 router.get("/", async (req: Request, res: Response) => {
   const currentDate = new Date().toISOString().split("T")[0];
+
+  const friendIds = await getFriendUserIds(req.userId!);
+  const visibleCreators = [req.userId!, ...friendIds];
 
   const { data, error } = await supabaseAdmin
     .from("walk_groups")
@@ -15,6 +49,7 @@ router.get("/", async (req: Request, res: Response) => {
     )
     .eq("is_active", true)
     .gte("walk_date", currentDate)
+    .in("creator_id", visibleCreators)
     .order("walk_date", { ascending: true });
 
   if (error) {
@@ -29,7 +64,8 @@ router.get("/", async (req: Request, res: Response) => {
     const { data: members } = await supabaseAdmin
       .from("walk_group_members")
       .select("group_id")
-      .in("group_id", groupIds);
+      .in("group_id", groupIds)
+      .eq("status", "approved");
 
     if (members) {
       for (const m of members) {
@@ -118,10 +154,37 @@ router.put("/:id", async (req: Request, res: Response) => {
 router.post("/:id/join", async (req: Request, res: Response) => {
   const { dog_id } = req.body;
 
+  const { data: existing } = await supabaseAdmin
+    .from("walk_group_members")
+    .select("id, status")
+    .eq("group_id", req.params.id)
+    .eq("user_id", req.userId!)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status === "pending") {
+      res.json({ message: "Already pending", status: "pending" });
+      return;
+    }
+    if (existing.status === "approved") {
+      res.json({ message: "Already joined", status: "approved" });
+      return;
+    }
+    // rejected -> allow re-request
+    await supabaseAdmin
+      .from("walk_group_members")
+      .update({ status: "pending", dog_id })
+      .eq("id", existing.id);
+
+    res.json({ message: "Re-requested", status: "pending" });
+    return;
+  }
+
   const { error } = await supabaseAdmin.from("walk_group_members").insert({
     group_id: req.params.id,
     user_id: req.userId!,
     dog_id,
+    status: "pending",
   });
 
   if (error) {
@@ -129,7 +192,63 @@ router.post("/:id/join", async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ message: "Joined" });
+  res.json({ message: "Request sent", status: "pending" });
+});
+
+router.post("/:id/approve", async (req: Request, res: Response) => {
+  const { memberId } = req.body;
+
+  const { data: group } = await supabaseAdmin
+    .from("walk_groups")
+    .select("creator_id")
+    .eq("id", req.params.id)
+    .single();
+
+  if (group?.creator_id !== req.userId) {
+    res.status(403).json({ error: "只有發起人可以審核" });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("walk_group_members")
+    .update({ status: "approved" })
+    .eq("id", memberId)
+    .eq("group_id", req.params.id);
+
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  res.json({ message: "Approved" });
+});
+
+router.post("/:id/reject", async (req: Request, res: Response) => {
+  const { memberId } = req.body;
+
+  const { data: group } = await supabaseAdmin
+    .from("walk_groups")
+    .select("creator_id")
+    .eq("id", req.params.id)
+    .single();
+
+  if (group?.creator_id !== req.userId) {
+    res.status(403).json({ error: "只有發起人可以審核" });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("walk_group_members")
+    .delete()
+    .eq("id", memberId)
+    .eq("group_id", req.params.id);
+
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  res.json({ message: "Rejected" });
 });
 
 router.delete("/:id/leave", async (req: Request, res: Response) => {

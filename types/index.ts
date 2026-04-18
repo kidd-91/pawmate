@@ -114,6 +114,7 @@ export interface WalkGroupMember {
   group_id: string;
   user_id: string;
   dog_id: string;
+  status: "pending" | "approved" | "rejected";
   joined_at: string;
   // joined
   dog?: Dog;

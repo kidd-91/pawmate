@@ -34,7 +34,9 @@ interface WalkGroupState {
     notes: string;
     max_members: number;
   }>) => Promise<WalkGroup | null>;
-  joinGroup: (groupId: string, userId: string, dogId: string) => Promise<boolean>;
+  joinGroup: (groupId: string, userId: string, dogId: string) => Promise<string>;
+  approveJoin: (groupId: string, memberId: string) => Promise<boolean>;
+  rejectJoin: (groupId: string, memberId: string) => Promise<boolean>;
   leaveGroup: (groupId: string, userId: string) => Promise<void>;
   fetchMembers: (groupId: string) => Promise<void>;
   fetchMessages: (groupId: string) => Promise<void>;
@@ -92,8 +94,28 @@ export const useWalkGroupStore = create<WalkGroupState>((set, get) => ({
 
   joinGroup: async (groupId, _userId, dogId) => {
     try {
-      await api.post(`/api/walks/${groupId}/join`, { dog_id: dogId });
+      const result = await api.post<{ status: string }>(`/api/walks/${groupId}/join`, { dog_id: dogId });
       await get().fetchMembers(groupId);
+      return result?.status ?? "pending";
+    } catch {
+      return "error";
+    }
+  },
+
+  approveJoin: async (groupId, memberId) => {
+    try {
+      await api.post(`/api/walks/${groupId}/approve`, { memberId });
+      await get().fetchGroup(groupId);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  rejectJoin: async (groupId, memberId) => {
+    try {
+      await api.post(`/api/walks/${groupId}/reject`, { memberId });
+      await get().fetchGroup(groupId);
       return true;
     } catch {
       return false;
