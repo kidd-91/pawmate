@@ -44,6 +44,7 @@ export default function ProfileScreen() {
   const [breed, setBreed] = useState("");
   const [customBreed, setCustomBreed] = useState("");
   const [ageMonths, setAgeMonths] = useState("");
+  const [ageUnit, setAgeUnit] = useState<"months" | "years">("months");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [size, setSize] = useState("medium");
   const [personality, setPersonality] = useState<string[]>([]);
@@ -82,7 +83,13 @@ export default function ProfileScreen() {
     if (myDog) {
       setName(myDog.name);
       setBreed(myDog.breed);
-      setAgeMonths(String(myDog.age_months));
+      if (myDog.age_months >= 12 && myDog.age_months % 12 === 0) {
+        setAgeMonths(String(myDog.age_months / 12));
+        setAgeUnit("years");
+      } else {
+        setAgeMonths(String(myDog.age_months));
+        setAgeUnit("months");
+      }
       setGender(myDog.gender);
       setSize(myDog.size);
       setPersonality(myDog.personality);
@@ -202,6 +209,11 @@ export default function ProfileScreen() {
     setCustomTag("");
   };
 
+  const computeAgeMonths = () => {
+    const val = parseInt(ageMonths) || 0;
+    return ageUnit === "years" ? val * 12 : val;
+  };
+
   const handleSave = async () => {
     if (!session?.user?.id || !name.trim()) return;
     setSaving(true);
@@ -211,7 +223,7 @@ export default function ProfileScreen() {
     const dogData = {
       name: name.trim(),
       breed: finalBreed,
-      age_months: parseInt(ageMonths) || 0,
+      age_months: computeAgeMonths(),
       gender,
       size,
       personality,
@@ -414,16 +426,28 @@ export default function ProfileScreen() {
       />
 
       {/* Age */}
-      <TextInput
-        label="年齡"
-        value={ageMonths}
-        onChangeText={setAgeMonths}
-        keyboardType="numeric"
-        style={styles.input}
-        mode="outlined"
-        outlineColor={colors.border}
-        activeOutlineColor={colors.primary}
-      />
+      <Text style={styles.label}>年齡</Text>
+      <View style={styles.ageRow}>
+        <TextInput
+          label={ageUnit === "years" ? "幾歲" : "幾個月"}
+          value={ageMonths}
+          onChangeText={setAgeMonths}
+          keyboardType="numeric"
+          style={styles.ageInput}
+          mode="outlined"
+          outlineColor={colors.border}
+          activeOutlineColor={colors.primary}
+        />
+        <SegmentedButtons
+          value={ageUnit}
+          onValueChange={(v) => setAgeUnit(v as "months" | "years")}
+          buttons={[
+            { value: "years", label: "歲" },
+            { value: "months", label: "個月" },
+          ]}
+          style={styles.ageUnitSegment}
+        />
+      </View>
 
       {/* Gender */}
       <Text style={styles.label}>性別</Text>
@@ -734,7 +758,7 @@ export default function ProfileScreen() {
               owner_id: session?.user?.id ?? "",
               name: name || "你的狗狗",
               breed: breed || customBreed,
-              age_months: parseInt(ageMonths) || 0,
+              age_months: computeAgeMonths(),
               gender,
               size: size as "small" | "medium" | "large",
               personality,
@@ -907,6 +931,19 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.surface,
     marginBottom: spacing.sm,
+  },
+  ageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  ageInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  ageUnitSegment: {
+    flex: 1,
   },
   bioInput: {
     minHeight: 100,
