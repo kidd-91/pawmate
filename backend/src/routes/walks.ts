@@ -17,20 +17,29 @@ async function getFriendUserIds(userId: string): Promise<string[]> {
 
   const { data: matchesA } = await supabaseAdmin
     .from("matches")
-    .select("dog_b:dogs!matches_dog_b_id_fkey(owner_id)")
+    .select("dog_b_id")
     .eq("dog_a_id", myDog.id);
 
   const { data: matchesB } = await supabaseAdmin
     .from("matches")
-    .select("dog_a:dogs!matches_dog_a_id_fkey(owner_id)")
+    .select("dog_a_id")
     .eq("dog_b_id", myDog.id);
 
+  const matchedDogIds = [
+    ...(matchesA ?? []).map((m) => m.dog_b_id),
+    ...(matchesB ?? []).map((m) => m.dog_a_id),
+  ];
+
+  if (matchedDogIds.length === 0) return [];
+
+  const { data: friendDogs } = await supabaseAdmin
+    .from("dogs")
+    .select("owner_id")
+    .in("id", matchedDogIds);
+
   const friendIds = new Set<string>();
-  (matchesA ?? []).forEach((m: any) => {
-    if (m.dog_b?.owner_id) friendIds.add(m.dog_b.owner_id);
-  });
-  (matchesB ?? []).forEach((m: any) => {
-    if (m.dog_a?.owner_id) friendIds.add(m.dog_a.owner_id);
+  (friendDogs ?? []).forEach((d) => {
+    if (d.owner_id && d.owner_id !== userId) friendIds.add(d.owner_id);
   });
 
   return Array.from(friendIds);

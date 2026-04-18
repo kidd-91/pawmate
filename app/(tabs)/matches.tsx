@@ -19,18 +19,20 @@ import PawBackground from "../../components/PawBackground";
 import type { Match, Dog } from "../../types";
 
 export default function MatchesScreen() {
-  const { myDog } = useAuthStore();
+  const { session, myDog, fetchMyDog } = useAuthStore();
   const { matches, fetchMatches } = useMatchStore();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  useEffect(() => {
+    if (session && !myDog) fetchMyDog();
+  }, [session]);
+
   // Fetch on mount and whenever myDog changes
   useEffect(() => {
     if (myDog) {
       fetchMatches(myDog.id).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
     }
   }, [myDog]);
 

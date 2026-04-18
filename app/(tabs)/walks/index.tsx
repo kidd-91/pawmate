@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Text, Button, FAB } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -25,8 +26,12 @@ const TIME_LABELS: Record<string, string> = {
 
 export default function WalksScreen() {
   const { groups, fetchGroups, loading } = useWalkGroupStore();
-  const { myDog } = useAuthStore();
+  const { session, myDog, fetchMyDog } = useAuthStore();
   const router = useRouter();
+
+  useEffect(() => {
+    if (session && !myDog) fetchMyDog();
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,17 +60,21 @@ export default function WalksScreen() {
           <Text style={styles.emptyIcon}>🐕‍🦺</Text>
           <Text style={styles.emptyTitle}>還沒有揪團</Text>
           <Text style={styles.emptyText}>發起一個遛狗揪團{"\n"}找附近的狗友一起出門吧！</Text>
-          {myDog && (
-            <Button
-              mode="contained"
-              buttonColor={colors.primary}
-              onPress={() => router.push("/(tabs)/walks/create")}
-              style={styles.emptyBtn}
-              icon="plus"
-            >
-              發起揪團
-            </Button>
-          )}
+          <Button
+            mode="contained"
+            buttonColor={colors.primary}
+            onPress={() => {
+              if (myDog) {
+                router.push("/(tabs)/walks/create");
+              } else {
+                Alert.alert("尚未建立檔案", "請先到「我的」頁面建立狗狗檔案");
+              }
+            }}
+            style={styles.emptyBtn}
+            icon="plus"
+          >
+            發起揪團
+          </Button>
         </View>
       </View>
     );
@@ -139,14 +148,18 @@ export default function WalksScreen() {
         )}
       />
 
-      {myDog && (
-        <FAB
-          icon="plus"
-          style={styles.fab}
-          color="#FFF"
-          onPress={() => router.push("/(tabs)/walks/create")}
-        />
-      )}
+      <FAB
+        icon="plus"
+        style={styles.fab}
+        color="#FFF"
+        onPress={() => {
+          if (myDog) {
+            router.push("/(tabs)/walks/create");
+          } else {
+            Alert.alert("尚未建立檔案", "請先到「我的」頁面建立狗狗檔案");
+          }
+        }}
+      />
     </View>
   );
 }
