@@ -34,9 +34,21 @@ router.get("/candidates/list", async (req: Request, res: Response) => {
     .select("swiped_dog_id")
     .eq("swiper_dog_id", dogId as string);
 
+  const { data: matchesA } = await supabaseAdmin
+    .from("matches")
+    .select("dog_b_id")
+    .eq("dog_a_id", dogId as string);
+
+  const { data: matchesB } = await supabaseAdmin
+    .from("matches")
+    .select("dog_a_id")
+    .eq("dog_b_id", dogId as string);
+
   const excludeIds = [
     dogId as string,
     ...(swipedDogs?.map((s) => s.swiped_dog_id) ?? []),
+    ...(matchesA?.map((m) => m.dog_b_id) ?? []),
+    ...(matchesB?.map((m) => m.dog_a_id) ?? []),
   ];
 
   const { data, error } = await supabaseAdmin

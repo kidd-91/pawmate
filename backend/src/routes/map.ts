@@ -36,8 +36,40 @@ router.get("/nearby-dogs", async (req: Request, res: Response) => {
     return;
   }
 
+  // Get user's dog to check swipes & matches
+  const { data: myDog } = await supabaseAdmin
+    .from("dogs")
+    .select("id")
+    .eq("owner_id", req.userId!)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  let excludeIds = new Set<string>();
+
+  if (myDog) {
+    const { data: swipedDogs } = await supabaseAdmin
+      .from("swipes")
+      .select("swiped_dog_id")
+      .eq("swiper_dog_id", myDog.id);
+
+    const { data: matchesA } = await supabaseAdmin
+      .from("matches")
+      .select("dog_b_id")
+      .eq("dog_a_id", myDog.id);
+
+    const { data: matchesB } = await supabaseAdmin
+      .from("matches")
+      .select("dog_a_id")
+      .eq("dog_b_id", myDog.id);
+
+    (swipedDogs ?? []).forEach((s) => excludeIds.add(s.swiped_dog_id));
+    (matchesA ?? []).forEach((m) => excludeIds.add(m.dog_b_id));
+    (matchesB ?? []).forEach((m) => excludeIds.add(m.dog_a_id));
+  }
+
   const filtered = (data ?? []).filter(
-    (d: { owner_id: string }) => d.owner_id !== req.userId
+    (d: { owner_id: string; id: string }) =>
+      d.owner_id !== req.userId && !excludeIds.has(d.id)
   );
 
   res.json(filtered);
