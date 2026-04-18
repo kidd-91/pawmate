@@ -5,20 +5,61 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  TouchableOpacity,
 } from "react-native";
 import { Text, TextInput } from "react-native-paper";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
+import { useMatchStore } from "../../../stores/matchStore";
 import { useChatStore } from "../../../stores/chatStore";
+import PawBackground from "../../../components/PawBackground";
 
 export default function ChatRoomScreen() {
   const { id: matchId } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuthStore();
+  const { session, myDog } = useAuthStore();
+  const { matches } = useMatchStore();
+  const navigation = useNavigation();
+  const router = useRouter();
   const { messages, fetchMessages, sendMessage, subscribeToMessages, unsubscribe } =
     useChatStore();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
+
+  // Find the other dog from the match
+  const match = matches.find((m) => m.id === matchId);
+  const otherDog =
+    match && myDog
+      ? match.dog_a_id === myDog.id
+        ? match.dog_b
+        : match.dog_a
+      : null;
+
+  // Set custom header with dog name and avatar
+  useEffect(() => {
+    if (otherDog) {
+      navigation.setOptions({
+        headerTitle: () => (
+          <TouchableOpacity
+            style={styles.headerRow}
+            onPress={() => router.push(`/(tabs)/dog/${otherDog.id}`)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={
+                otherDog.photos?.length
+                  ? { uri: otherDog.photos[0] }
+                  : require("../../../assets/icon.png")
+              }
+              style={styles.headerAvatar}
+            />
+            <Text style={styles.headerName}>{otherDog.name}</Text>
+          </TouchableOpacity>
+        ),
+      });
+    }
+  }, [otherDog]);
 
   useEffect(() => {
     if (matchId) {
@@ -48,6 +89,7 @@ export default function ChatRoomScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
+      <PawBackground />
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -63,15 +105,23 @@ export default function ChatRoomScreen() {
                 isMine ? styles.bubbleRowRight : styles.bubbleRowLeft,
               ]}
             >
+              {/* Other dog's avatar */}
+              {!isMine && (
+                <Image
+                  source={
+                    otherDog?.photos?.length
+                      ? { uri: otherDog.photos[0] }
+                      : require("../../../assets/icon.png")
+                  }
+                  style={styles.msgAvatar}
+                />
+              )}
               <View
                 style={[
                   styles.bubble,
                   isMine ? styles.myBubble : styles.otherBubble,
                 ]}
               >
-                {!isMine && item.sender && (
-                  <Text style={styles.senderName}>{item.sender.display_name}</Text>
-                )}
                 <Text
                   style={[
                     styles.messageText,
@@ -105,7 +155,7 @@ export default function ChatRoomScreen() {
           right={
             <TextInput.Icon
               icon="send"
-              color={colors.primary}
+              color={text.trim() ? colors.primary : colors.textSecondary}
               onPress={handleSend}
             />
           }
@@ -117,6 +167,21 @@ export default function ChatRoomScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  headerName: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: colors.text,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -128,6 +193,7 @@ const styles = StyleSheet.create({
   bubbleRow: {
     flexDirection: "row",
     marginBottom: spacing.sm,
+    alignItems: "flex-end",
   },
   bubbleRowRight: {
     justifyContent: "flex-end",
@@ -135,8 +201,14 @@ const styles = StyleSheet.create({
   bubbleRowLeft: {
     justifyContent: "flex-start",
   },
+  msgAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
   bubble: {
-    maxWidth: "75%",
+    maxWidth: "70%",
     padding: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 18,
@@ -153,12 +225,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-  },
-  senderName: {
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: "bold",
-    marginBottom: 2,
   },
   messageText: {
     fontSize: 16,

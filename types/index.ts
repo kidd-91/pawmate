@@ -16,7 +16,13 @@ export interface Dog {
   size: "small" | "medium" | "large";
   personality: string[];
   bio: string;
+  city: string;
+  district: string;
   photos: string[];
+  walking_locations: string[];
+  walking_spots: string[];
+  walking_times: string[];
+  walking_frequency: string;
   is_active: boolean;
   created_at: string;
   // joined from profiles
@@ -67,3 +73,58 @@ export const SIZE_OPTIONS = [
   { label: "中型犬", value: "medium" },
   { label: "大型犬", value: "large" },
 ] as const;
+
+export const WALKING_LOCATION_OPTIONS = [
+  "公園", "河堤", "學校操場", "社區中庭", "山步道",
+  "海邊", "寵物公園", "草地", "田野小路",
+] as const;
+
+export const WALKING_TIME_OPTIONS = [
+  { label: "🌅 早上", value: "morning" },
+  { label: "☀️ 下午", value: "afternoon" },
+  { label: "🌙 晚上", value: "evening" },
+] as const;
+
+export const WALKING_FREQUENCY_OPTIONS = [
+  { label: "每天", value: "daily" },
+  { label: "週末", value: "weekend" },
+  { label: "偶爾", value: "occasionally" },
+] as const;
+
+export interface WalkGroup {
+  id: string;
+  creator_id: string;
+  creator_dog_id: string;
+  title: string;
+  location: string;
+  walk_date: string;
+  walk_time: string;
+  notes: string;
+  max_members: number;
+  is_active: boolean;
+  created_at: string;
+  // joined
+  creator_dog?: Dog;
+  members?: WalkGroupMember[];
+  member_count?: number;
+}
+
+export interface WalkGroupMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  dog_id: string;
+  joined_at: string;
+  // joined
+  dog?: Dog;
+  profile?: Profile;
+}
+
+export interface WalkGroupMessage {
+  id: string;
+  group_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender?: Profile;
+}

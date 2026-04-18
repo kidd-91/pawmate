@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
 import type { Profile, Dog } from "../types";
 import type { Session } from "@supabase/supabase-js";
 
@@ -23,27 +24,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setSession: (session) => set({ session, loading: false }),
 
   fetchProfile: async () => {
-    const userId = get().session?.user?.id;
-    if (!userId) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) set({ profile: data });
+    try {
+      const data = await api.get<Profile>("/api/auth/me");
+      if (data) set({ profile: data });
+    } catch {}
   },
 
   fetchMyDog: async () => {
-    const userId = get().session?.user?.id;
-    if (!userId) return;
-    const { data } = await supabase
-      .from("dogs")
-      .select("*")
-      .eq("owner_id", userId)
-      .eq("is_active", true)
-      .limit(1)
-      .single();
-    if (data) set({ myDog: data });
+    try {
+      const data = await api.get<Dog>("/api/dogs/mine");
+      if (data) set({ myDog: data });
+    } catch {}
   },
 
   signOut: async () => {

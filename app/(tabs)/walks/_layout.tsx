@@ -1,16 +1,17 @@
 import { Stack } from "expo-router";
 import { colors } from "../../../constants/theme";
 
-export default function ChatLayout() {
+export default function WalksLayout() {
   return (
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: "bold" },
+        headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "聊天" }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="create" options={{ title: "發起揪團" }} />
       <Stack.Screen name="[id]" options={{ title: "" }} />
     </Stack>
   );
