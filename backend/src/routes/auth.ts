@@ -7,29 +7,26 @@ const router = Router();
 router.post("/register", async (req: Request, res: Response) => {
   const { email, password, displayName } = req.body;
 
-  const { data: authData, error: authError } =
-    await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: false,
-      user_metadata: { display_name: displayName },
-    });
+  const { data, error: signUpError } = await supabaseAdmin.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { display_name: displayName },
+    },
+  });
 
-  if (authError) {
-    res.status(400).json({ error: authError.message });
+  if (signUpError) {
+    res.status(400).json({ error: signUpError.message });
     return;
   }
 
-  const { error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .insert({ id: authData.user.id, display_name: displayName });
-
-  if (profileError) {
-    res.status(400).json({ error: profileError.message });
-    return;
+  if (data.user) {
+    await supabaseAdmin
+      .from("profiles")
+      .insert({ id: data.user.id, display_name: displayName });
   }
 
-  res.json({ user: authData.user });
+  res.json({ user: data.user, needsVerification: !data.session });
 });
 
 router.post("/login", async (req: Request, res: Response) => {
