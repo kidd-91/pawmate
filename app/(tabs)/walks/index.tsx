@@ -39,6 +39,12 @@ export default function WalksScreen() {
     }, [])
   );
 
+  // Auto-refresh every 30s
+  useEffect(() => {
+    const interval = setInterval(() => fetchGroups(), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + "T00:00:00");
     const now = new Date();

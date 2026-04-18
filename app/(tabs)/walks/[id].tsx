@@ -71,6 +71,16 @@ export default function WalkGroupDetailScreen() {
     }
   }, [groupId]);
 
+  // Auto-refresh every 30s
+  useEffect(() => {
+    if (!groupId) return;
+    const interval = setInterval(() => {
+      fetchGroup(groupId);
+      fetchMembers(groupId);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [groupId]);
+
   useEffect(() => {
     if (currentGroup) {
       navigation.setOptions({ title: currentGroup.title });

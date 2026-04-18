@@ -43,6 +43,13 @@ export default function MatchesScreen() {
     }, [myDog])
   );
 
+  // Auto-refresh every 30s
+  useEffect(() => {
+    if (!myDog) return;
+    const interval = setInterval(() => fetchMatches(myDog.id), 30000);
+    return () => clearInterval(interval);
+  }, [myDog]);
+
   const onRefresh = useCallback(async () => {
     if (!myDog) return;
     setRefreshing(true);
