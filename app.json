@@ -20,12 +20,18 @@
       }
     },
     "android": {
+      "package": "com.kidd91.pawmate",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFF5E1"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -34,6 +40,13 @@
     "plugins": [
       "expo-router",
       "expo-location"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "37b070cd-09ac-4cab-84d4-9358a95ea6e9"
+      }
+    },
+    "owner": "kidd-91"
   }
 }

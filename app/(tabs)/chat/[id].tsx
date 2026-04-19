@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Text, TextInput } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
@@ -40,6 +41,11 @@ export default function ChatRoomScreen() {
   useEffect(() => {
     if (otherDog) {
       navigation.setOptions({
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.replace("/(tabs)/chat")} style={{ marginRight: 8 }}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+        ),
         headerTitle: () => (
           <TouchableOpacity
             style={styles.headerRow}
