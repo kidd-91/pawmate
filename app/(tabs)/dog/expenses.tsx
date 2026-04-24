@@ -90,7 +90,11 @@ export default function ExpensesScreen() {
       <PawBackground />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={styles.headerBtn}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)/dog")}
+          hitSlop={8}
+          style={styles.headerBtn}
+        >
           <MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{monthRange.year}/{String(monthRange.month).padStart(2, "0")} 花費</Text>

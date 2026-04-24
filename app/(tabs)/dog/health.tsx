@@ -71,7 +71,11 @@ export default function HealthScreen() {
       <PawBackground />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={styles.headerBtn}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)/dog")}
+          hitSlop={8}
+          style={styles.headerBtn}
+        >
           <MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>健康紀錄</Text>
@@ -83,7 +87,7 @@ export default function HealthScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterBar}
       >
-        <FilterChip label="全部" icon="🩺" active={filter === null} onPress={() => setFilter(null)} />
+        <FilterChip label="全部" icon="" active={filter === null} onPress={() => setFilter(null)} />
         {types.map((t) => (
           <FilterChip
             key={t.code}
@@ -233,6 +237,7 @@ function HealthFormModal({
   const [title, setTitle] = useState("");
   const [numericValue, setNumericValue] = useState("");
   const [notes, setNotes] = useState("");
+  const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 10));
   const [nextDueAt, setNextDueAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -248,6 +253,7 @@ function HealthFormModal({
     setTitle("");
     setNumericValue("");
     setNotes("");
+    setRecordedAt(new Date().toISOString().slice(0, 10));
     setNextDueAt("");
   };
 
@@ -265,6 +271,11 @@ function HealthFormModal({
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(recordedAt)) {
+      Alert.alert("記錄日期格式錯誤", "請用 YYYY-MM-DD（例：2026-04-24）");
+      return;
+    }
+
     let parsedDue: string | null = null;
     if (showNextDue && nextDueAt) {
       // Accept YYYY-MM-DD only
@@ -279,6 +290,7 @@ function HealthFormModal({
     const created = await createRecord({
       dog_id: dogId,
       type_code: typeCode,
+      recorded_at: recordedAt,
       title,
       numeric_value: showNumeric ? parseFloat(numericValue) : null,
       notes,
@@ -376,6 +388,15 @@ function HealthFormModal({
               />
             </>
           ) : null}
+
+          <Text style={styles.formLabel}>記錄日期</Text>
+          <RNTextInput
+            style={styles.input}
+            value={recordedAt}
+            onChangeText={setRecordedAt}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={colors.textSecondary}
+          />
 
           {showNextDue ? (
             <>
