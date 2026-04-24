@@ -10,7 +10,14 @@ export default function ChatLayout() {
         headerTitleStyle: { fontWeight: "bold" },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "聊天" }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "聊天",
+          headerLeft: () => null,
+          headerBackVisible: false,
+        }}
+      />
       <Stack.Screen name="[id]" options={{ title: "" }} />
     </Stack>
   );

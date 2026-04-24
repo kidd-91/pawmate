@@ -8,12 +8,12 @@ function BackButton() {
   const { from } = useLocalSearchParams<{ from?: string }>();
 
   const handleBack = () => {
-    if (from === "map") {
-      router.replace("/(tabs)/map");
-    } else if (from === "matches") {
-      router.replace("/(tabs)/matches");
-    } else if (from === "chat") {
+    if (from === "chat") {
       router.replace("/(tabs)/chat");
+    } else if (from === "likes-you") {
+      router.replace("/(tabs)/likes-you");
+    } else if (from === "explore") {
+      router.replace("/(tabs)/");
     } else {
       router.back();
     }
@@ -36,10 +36,28 @@ export default function DogLayout() {
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
         headerShadowVisible: false,
-        headerLeft: () => <BackButton />,
       }}
     >
-      <Stack.Screen name="[id]" options={{ title: "狗狗檔案" }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "我的狗狗",
+          headerLeft: () => null,
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: "狗狗檔案",
+          headerLeft: () => <BackButton />,
+        }}
+      />
+      <Stack.Screen
+        name="expenses"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

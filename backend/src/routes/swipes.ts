@@ -5,6 +5,67 @@ import { authMiddleware } from "../middleware/auth";
 const router = Router();
 router.use(authMiddleware);
 
+// List dogs who liked my dog but I have not responded to yet.
+// Powers the "💕 X 個人喜歡你" banner + likes-you list view.
+router.get("/likes-you", async (req: Request, res: Response) => {
+  const { dogId } = req.query;
+  if (!dogId) {
+    res.status(400).json({ error: "dogId required" });
+    return;
+  }
+
+  const { data: incomingLikes, error: likesError } = await supabaseAdmin
+    .from("swipes")
+    .select("swiper_dog_id, created_at")
+    .eq("swiped_dog_id", dogId as string)
+    .eq("direction", "like");
+
+  if (likesError) {
+    res.status(400).json({ error: likesError.message });
+    return;
+  }
+
+  const incomingIds = (incomingLikes ?? []).map((s) => s.swiper_dog_id);
+  if (incomingIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const { data: myResponses } = await supabaseAdmin
+    .from("swipes")
+    .select("swiped_dog_id")
+    .eq("swiper_dog_id", dogId as string)
+    .in("swiped_dog_id", incomingIds);
+
+  const respondedTo = new Set((myResponses ?? []).map((s) => s.swiped_dog_id));
+  const pendingIds = incomingIds.filter((id) => !respondedTo.has(id));
+
+  if (pendingIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const { data: dogs, error: dogsError } = await supabaseAdmin
+    .from("dogs")
+    .select("*, owner:profiles!dogs_owner_id_fkey(display_name, avatar_url)")
+    .in("id", pendingIds)
+    .eq("is_active", true);
+
+  if (dogsError) {
+    res.status(400).json({ error: dogsError.message });
+    return;
+  }
+
+  const likeMap = new Map((incomingLikes ?? []).map((s) => [s.swiper_dog_id, s.created_at]));
+  const enriched = (dogs ?? []).map((d) => ({
+    ...d,
+    liked_at: likeMap.get(d.id),
+  }));
+  enriched.sort((a, b) => (b.liked_at ?? "").localeCompare(a.liked_at ?? ""));
+
+  res.json(enriched);
+});
+
 router.get("/check", async (req: Request, res: Response) => {
   const { swiperId, swipedId } = req.query;
   if (!swiperId || !swipedId) {

@@ -8,18 +8,25 @@ interface SwipeResponse {
   match?: Match;
 }
 
+export interface LikedYouDog extends Dog {
+  liked_at?: string;
+}
+
 interface MatchState {
   candidates: Dog[];
   matches: Match[];
+  likesYou: LikedYouDog[];
   loadingCandidates: boolean;
   fetchCandidates: (myDogId: string, myDog?: Dog) => Promise<void>;
   swipe: (myDogId: string, targetDogId: string, direction: "like" | "pass") => Promise<Match | null>;
   fetchMatches: (myDogId: string) => Promise<void>;
+  fetchLikesYou: (myDogId: string) => Promise<void>;
 }
 
 export const useMatchStore = create<MatchState>((set) => ({
   candidates: [],
   matches: [],
+  likesYou: [],
   loadingCandidates: false,
 
   fetchCandidates: async (myDogId, myDog) => {
@@ -37,6 +44,9 @@ export const useMatchStore = create<MatchState>((set) => ({
   swipe: async (myDogId, targetDogId, direction) => {
     set((s) => ({
       candidates: s.candidates.filter((d) => d.id !== targetDogId),
+      // Optimistically remove from likesYou too — if I just responded to someone
+      // who liked me, they shouldn't show in the pending list anymore.
+      likesYou: s.likesYou.filter((d) => d.id !== targetDogId),
     }));
 
     try {
@@ -56,6 +66,13 @@ export const useMatchStore = create<MatchState>((set) => ({
     try {
       const data = await api.get<Match[]>(`/api/matches?dogId=${myDogId}`);
       set({ matches: data ?? [] });
+    } catch {}
+  },
+
+  fetchLikesYou: async (myDogId) => {
+    try {
+      const data = await api.get<LikedYouDog[]>(`/api/swipes/likes-you?dogId=${myDogId}`);
+      set({ likesYou: data ?? [] });
     } catch {}
   },
 }));

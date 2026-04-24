@@ -1,8 +1,9 @@
-import { Tabs } from "expo-router";
-import { View, StyleSheet } from "react-native";
+import { Tabs, useRouter } from "expo-router";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing } from "../../constants/theme";
+import { useMatchStore } from "../../stores/matchStore";
 
 function TabIcon({
   name,
@@ -31,6 +32,32 @@ function CustomHeader({ title, emoji }: { title: string; emoji: string }) {
       <Text style={styles.headerEmoji}>{emoji}</Text>
       <Text style={styles.headerTitle}>{title}</Text>
     </View>
+  );
+}
+
+function LikesYouHeaderButton() {
+  const router = useRouter();
+  const count = useMatchStore((s) => s.likesYou.length);
+  const hasLikes = count > 0;
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push("/(tabs)/likes-you")}
+      hitSlop={8}
+      style={styles.headerBtn}
+      activeOpacity={0.7}
+    >
+      <MaterialCommunityIcons
+        name={hasLikes ? "heart" : "heart-outline"}
+        size={24}
+        color={hasLikes ? colors.like : colors.textSecondary}
+      />
+      {hasLikes ? (
+        <View style={styles.headerBadge}>
+          <Text style={styles.headerBadgeText}>{count > 99 ? "99+" : count}</Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
   );
 }
 
@@ -72,38 +99,9 @@ export default function TabLayout() {
         options={{
           title: "探索",
           headerTitle: () => <CustomHeader title="探索" emoji="🐾" />,
+          headerRight: () => <LikesYouHeaderButton />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon name="cards-heart-outline" color={color} size={size} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="map"
-        options={{
-          title: "附近",
-          headerTitle: () => <CustomHeader title="附近的狗狗" emoji="📍" />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon name="map-marker-outline" color={color} size={size} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="matches"
-        options={{
-          title: "好友",
-          headerTitle: () => <CustomHeader title="我的好友" emoji="💕" />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon name="heart-outline" color={color} size={size} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="walks"
-        options={{
-          title: "揪團",
-          headerTitle: () => <CustomHeader title="遛狗揪團" emoji="🏃" />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon name="paw" color={color} size={size} focused={focused} />
           ),
         }}
       />
@@ -117,21 +115,29 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="dog"
+        options={{
+          title: "狗狗",
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon name="dog" color={color} size={size} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: "我的",
+          title: "我",
           headerTitle: () => <CustomHeader title="我的檔案" emoji="🐶" />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon name="account-circle-outline" color={color} size={size} focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="dog"
-        options={{
-          href: null,
-        }}
-      />
+      {/* Hidden routes — reachable via in-app navigation but absent from
+          the tab bar. likes-you is a sub-screen of 探索. walks is pending
+          full removal in Phase 2.5. */}
+      <Tabs.Screen name="likes-you" options={{ href: null }} />
+      <Tabs.Screen name="walks"     options={{ href: null }} />
     </Tabs>
   );
 }
@@ -170,5 +176,29 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: colors.text,
+  },
+  headerBtn: {
+    marginRight: spacing.md,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerBadge: {
+    position: "absolute",
+    top: 2,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    backgroundColor: colors.like,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerBadgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });

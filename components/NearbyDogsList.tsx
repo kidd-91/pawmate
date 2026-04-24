@@ -6,18 +6,18 @@ import {
   Image,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from "react-native";
-import { Text, Chip } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Alert } from "react-native";
-import { colors, spacing } from "../../constants/theme";
-import { api } from "../../lib/api";
-import { useAuthStore } from "../../stores/authStore";
-import { useMatchStore } from "../../stores/matchStore";
-import PawBackground from "../../components/PawBackground";
+import { colors, spacing } from "../constants/theme";
+import { api } from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
+import { useMatchStore } from "../stores/matchStore";
+import PawBackground from "./PawBackground";
 
 interface NearbyDog {
   id: string;
@@ -40,16 +40,30 @@ interface NearbyDog {
 
 const RADIUS_OPTIONS = [3, 5, 10, 20];
 
-export default function MapScreen() {
+export default function NearbyDogsList() {
   const { session, myDog } = useAuthStore();
+  const { swipe } = useMatchStore();
   const router = useRouter();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [nearbyDogs, setNearbyDogs] = useState<NearbyDog[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [radius, setRadius] = useState(10);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
-  const initLocation = async () => {
+  const fetchNearbyDogs = useCallback(async (lat: number, lng: number, r: number) => {
+    try {
+      const data = await api.get<NearbyDog[]>(
+        `/api/map/nearby-dogs?lat=${lat}&lng=${lng}&radius_km=${r}`
+      );
+      if (data) {
+        const filtered = myDog ? data.filter((d) => d.id !== myDog.id) : data;
+        setNearbyDogs(filtered);
+      }
+    } catch {}
+  }, [myDog]);
+
+  const initLocation = useCallback(async () => {
     setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -62,7 +76,6 @@ export default function MapScreen() {
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc);
 
-      // Update user location via backend API
       if (session?.user?.id) {
         await api.post("/api/map/update-location", {
           lat: loc.coords.latitude,
@@ -71,11 +84,11 @@ export default function MapScreen() {
       }
 
       await fetchNearbyDogs(loc.coords.latitude, loc.coords.longitude, radius);
-    } catch (e) {
+    } catch {
       setErrorMsg("無法取得位置");
     }
     setLoading(false);
-  };
+  }, [session, radius, fetchNearbyDogs]);
 
   useEffect(() => {
     initLocation();
@@ -86,22 +99,8 @@ export default function MapScreen() {
       if (location) {
         fetchNearbyDogs(location.coords.latitude, location.coords.longitude, radius);
       }
-    }, [location, radius])
+    }, [location, radius, fetchNearbyDogs])
   );
-
-  const fetchNearbyDogs = async (lat: number, lng: number, r: number) => {
-    try {
-      const data = await api.get<NearbyDog[]>(
-        `/api/map/nearby-dogs?lat=${lat}&lng=${lng}&radius_km=${r}`
-      );
-      if (data) {
-        const filtered = myDog
-          ? data.filter((d) => d.id !== myDog.id)
-          : data;
-        setNearbyDogs(filtered);
-      }
-    } catch {}
-  };
 
   const handleRadiusChange = async (r: number) => {
     setRadius(r);
@@ -118,15 +117,6 @@ export default function MapScreen() {
     }
   };
 
-  const formatDistance = (km: number | undefined | null) => {
-    if (km == null) return null;
-    if (km < 1) return `${Math.round(km * 1000)}m`;
-    return `${km.toFixed(1)}km`;
-  };
-
-  const { swipe } = useMatchStore();
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-
   const handleLike = async (targetDogId: string) => {
     if (!myDog) return;
     setLikedIds((prev) => new Set(prev).add(targetDogId));
@@ -136,10 +126,15 @@ export default function MapScreen() {
     }
   };
 
+  const formatDistance = (km: number | undefined | null) => {
+    if (km == null) return null;
+    if (km < 1) return `${Math.round(km * 1000)}m`;
+    return `${km.toFixed(1)}km`;
+  };
+
   if (errorMsg) {
     return (
       <View style={styles.emptyContainer}>
-        <PawBackground />
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>📍</Text>
           <Text style={styles.emptyTitle}>{errorMsg}</Text>
@@ -152,7 +147,6 @@ export default function MapScreen() {
   if (!location && loading) {
     return (
       <View style={styles.emptyContainer}>
-        <PawBackground />
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>📍</Text>
           <Text style={styles.emptyTitle}>取得位置中...</Text>
@@ -164,9 +158,6 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <PawBackground />
-
-      {/* Radius selector */}
       <View style={styles.radiusBar}>
         <MaterialCommunityIcons name="map-marker-radius" size={18} color={colors.primary} />
         <Text style={styles.radiusLabel}>搜尋範圍：</Text>
@@ -183,7 +174,6 @@ export default function MapScreen() {
         ))}
       </View>
 
-      {/* Count */}
       <View style={styles.countBar}>
         <Text style={styles.countText}>
           附近 {radius} 公里內找到 {nearbyDogs.length} 隻狗狗
@@ -221,7 +211,7 @@ export default function MapScreen() {
               <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.7}
-                onPress={() => router.push(`/(tabs)/dog/${item.id}?from=map`)}
+                onPress={() => router.push(`/(tabs)/dog/${item.id}?from=explore`)}
               >
                 <LinearGradient
                   colors={["rgba(255,140,105,0.06)", "rgba(255,209,102,0.04)"]}
@@ -234,7 +224,7 @@ export default function MapScreen() {
                   source={
                     item.photos?.length > 0
                       ? { uri: item.photos[0] }
-                      : require("../../assets/icon.png")
+                      : require("../assets/icon.png")
                   }
                   style={styles.avatar}
                 />
@@ -300,11 +290,7 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  // Radius bar
+  container: { flex: 1 },
   radiusBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -315,11 +301,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
   },
-  radiusLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginRight: 2,
-  },
+  radiusLabel: { fontSize: 13, color: colors.textSecondary, marginRight: 2 },
   radiusChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -328,34 +310,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  radiusChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  radiusChipText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: "600",
-  },
-  radiusChipTextActive: {
-    color: "#FFF",
-  },
-  // Count
-  countBar: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  countText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  // List
-  list: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
+  radiusChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  radiusChipText: { fontSize: 13, color: colors.textSecondary, fontWeight: "600" },
+  radiusChipTextActive: { color: "#FFF" },
+  countBar: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  countText: { fontSize: 13, color: colors.textSecondary, textAlign: "center" },
+  list: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl, gap: spacing.sm },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -376,20 +336,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255,140,105,0.15)",
   },
-  cardInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  dogName: {
-    fontSize: 17,
-    fontWeight: "bold",
-    color: colors.text,
-  },
+  cardInfo: { flex: 1, marginLeft: spacing.md },
+  nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dogName: { fontSize: 17, fontWeight: "bold", color: colors.text },
   distanceBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -399,44 +348,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
-  distanceText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.primary,
-  },
-  breed: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  tags: {
-    flexDirection: "row",
-    gap: 4,
-    marginTop: 6,
-  },
-  tag: {
-    backgroundColor: "rgba(255,209,102,0.3)",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  tagText: {
-    fontSize: 11,
-    color: colors.text,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  locationText: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  ownerText: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
+  distanceText: { fontSize: 12, fontWeight: "bold", color: colors.primary },
+  breed: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  tags: { flexDirection: "row", gap: 4, marginTop: 6 },
+  tag: { backgroundColor: "rgba(255,209,102,0.3)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  tagText: { fontSize: 11, color: colors.text },
+  cardFooter: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  locationText: { fontSize: 11, color: colors.textSecondary },
+  ownerText: { fontSize: 11, color: colors.textSecondary },
   likeBtn: {
     width: 42,
     height: 42,
@@ -446,13 +365,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: spacing.xs,
   },
-  likeBtnActive: {
-    backgroundColor: colors.primary,
-  },
-  // Empty states
+  likeBtnActive: { backgroundColor: colors.primary },
   emptyContainer: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.lg,
@@ -468,19 +383,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
   },
-  emptyIcon: {
-    fontSize: 56,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.text,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    textAlign: "center",
-  },
+  emptyIcon: { fontSize: 56, marginBottom: spacing.md },
+  emptyTitle: { fontSize: 20, fontWeight: "bold", color: colors.text },
+  emptyText: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.sm, textAlign: "center" },
 });

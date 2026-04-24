@@ -129,3 +129,50 @@ export interface WalkGroupMessage {
   created_at: string;
   sender?: Profile;
 }
+
+// ============================================================================
+// Expenses
+// ============================================================================
+
+export interface ExpenseCategory {
+  id: string;
+  code: string | null;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  is_system: boolean;
+  created_by_user_id: string | null;
+  sort_order: number;
+}
+
+export interface DogExpense {
+  id: string;
+  category_id: string;
+  amount: number;
+  currency: string;
+  spent_at: string;             // YYYY-MM-DD
+  paid_by_user_id: string;
+  merchant: string | null;
+  notes: string;
+  receipt_photo_url: string | null;
+  receipt_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // joined
+  category?: ExpenseCategory;
+  // per-dog share for this expense (1.0 = 100% to this dog)
+  share_ratio?: number;
+}
+
+export interface ExpenseSummary {
+  year: number;
+  month: number;
+  total: number;
+  by_category: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    total: number;
+  }[];
+}
