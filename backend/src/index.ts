@@ -11,6 +11,7 @@ import walkRoutes from "./routes/walks";
 import mapRoutes from "./routes/map";
 import uploadRoutes from "./routes/upload";
 import expenseRoutes from "./routes/expenses";
+import healthRoutes from "./routes/health";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +33,7 @@ app.use("/api/walks", walkRoutes);
 app.use("/api/map", mapRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/health", healthRoutes);
 
 app.listen(PORT, () => {
   console.log(`PawMate API running on port ${PORT}`);

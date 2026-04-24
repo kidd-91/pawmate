@@ -58,6 +58,12 @@ export default function DogLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="health"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

@@ -176,3 +176,51 @@ export interface ExpenseSummary {
     total: number;
   }[];
 }
+
+// ============================================================================
+// Health records
+// ============================================================================
+
+export interface HealthRecordType {
+  code: string;                 // 'vaccine' | 'weight' | 'medication' | 'vet_visit' | 'deworming' | 'grooming'
+  label: string;
+  unit: string | null;
+  icon: string | null;
+  color: string | null;
+  has_reminder: boolean;
+  sort_order: number;
+}
+
+export interface HealthRecord {
+  id: string;
+  dog_id: string;
+  type_code: string;
+  recorded_at: string;          // YYYY-MM-DD
+  title: string;
+  numeric_value: number | null;
+  notes: string;
+  document_url: string | null;
+  metadata: Record<string, unknown>;
+  next_due_at: string | null;
+  recorded_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  type?: HealthRecordType;
+}
+
+export interface HealthReminder {
+  record_id: string;
+  dog_id: string;
+  dog_name: string;
+  type_code: string;
+  type_label: string;
+  title: string;
+  next_due_at: string;
+  days_until: number;
+}
+
+export interface LatestWeight {
+  numeric_value: number;
+  recorded_at: string;
+}

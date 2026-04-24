@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing, radii, shadows } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useExpenseStore } from "../../../stores/expenseStore";
+import { useHealthStore } from "../../../stores/healthStore";
 import PawBackground from "../../../components/PawBackground";
 
 const SIZE_LABELS: Record<string, string> = {
@@ -30,13 +31,21 @@ export default function DogIndexScreen() {
   const router = useRouter();
   const { myDog, fetchMyDog } = useAuthStore();
   const { summary, fetchSummary } = useExpenseStore();
+  const { reminders, latestWeight, fetchReminders, fetchLatestWeight } = useHealthStore();
 
   useFocusEffect(
     useCallback(() => {
       fetchMyDog();
-      if (myDog) fetchSummary(myDog.id);
-    }, [fetchMyDog, fetchSummary, myDog?.id])
+      if (myDog) {
+        fetchSummary(myDog.id);
+        fetchLatestWeight(myDog.id);
+        fetchReminders(30);
+      }
+    }, [fetchMyDog, fetchSummary, fetchLatestWeight, fetchReminders, myDog?.id])
   );
+
+  const dogReminders = reminders.filter((r) => r.dog_id === myDog?.id);
+  const nextReminder = dogReminders[0];
 
   const ageText = myDog
     ? myDog.age_months >= 12
@@ -69,11 +78,11 @@ export default function DogIndexScreen() {
               onEdit={() => router.push("/(tabs)/profile")}
             />
 
-            <SectionPlaceholder
-              icon="heart-pulse"
-              title="健康紀錄"
-              subtitle="疫苗、體重、用藥、看診都能在這裡記錄"
-              tag="即將推出"
+            <HealthSection
+              latestWeight={latestWeight}
+              nextReminder={nextReminder}
+              reminderCount={dogReminders.length}
+              onOpen={() => router.push("/(tabs)/dog/health")}
             />
 
             <ExpenseSection
@@ -136,6 +145,74 @@ function DogSummaryCard({
         </View>
       ) : null}
     </View>
+  );
+}
+
+function HealthSection({
+  latestWeight,
+  nextReminder,
+  reminderCount,
+  onOpen,
+}: {
+  latestWeight: any;
+  nextReminder: any;
+  reminderCount: number;
+  onOpen: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.card} onPress={onOpen} activeOpacity={0.85}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionIconWrap}>
+          <MaterialCommunityIcons name="heart-pulse" size={22} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>健康紀錄</Text>
+          <Text style={styles.sectionSubtitle}>疫苗 / 體重 / 用藥 / 看診</Text>
+        </View>
+        {reminderCount > 0 ? (
+          <View style={styles.reminderBadge}>
+            <Text style={styles.reminderBadgeText}>{reminderCount}</Text>
+          </View>
+        ) : null}
+        <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+      </View>
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryCell}>
+          <Text style={styles.summaryLabel}>最新體重</Text>
+          {latestWeight ? (
+            <>
+              <Text style={styles.summaryValue}>{Number(latestWeight.numeric_value).toFixed(1)} kg</Text>
+              <Text style={styles.summarySubvalue}>{latestWeight.recorded_at}</Text>
+            </>
+          ) : (
+            <Text style={styles.summaryHint}>還沒記錄過</Text>
+          )}
+        </View>
+        <View style={styles.summaryCell}>
+          <Text style={styles.summaryLabel}>下次提醒</Text>
+          {nextReminder ? (
+            <>
+              <Text style={styles.summaryValue} numberOfLines={1}>
+                {nextReminder.type_label}
+              </Text>
+              <Text
+                style={[
+                  styles.summarySubvalue,
+                  nextReminder.days_until <= 7 && { color: colors.like, fontWeight: "700" },
+                ]}
+              >
+                {nextReminder.days_until <= 0
+                  ? "今天到期"
+                  : `${nextReminder.days_until} 天後`}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.summaryHint}>30 天內無排程</Text>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -292,6 +369,17 @@ const styles = StyleSheet.create({
   summaryValue: { marginTop: 2, fontSize: 16, fontWeight: "700", color: colors.text },
   summarySubvalue: { marginTop: 2, fontSize: 12, color: colors.textSecondary },
   summaryHint: { fontSize: 13, color: colors.textSecondary },
+  reminderBadge: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    backgroundColor: colors.like,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.xs,
+  },
+  reminderBadgeText: { color: "#FFF", fontSize: 11, fontWeight: "700" },
 
   placeholder: {
     flexDirection: "row",
