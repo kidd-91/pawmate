@@ -11,6 +11,7 @@ import {
   ScrollView,
   TextInput as RNTextInput,
 } from "react-native";
+import { confirmAction } from "../../../lib/confirm";
 import { Text, Modal, Portal, Button } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -53,17 +54,16 @@ export default function HealthScreen() {
   }, [refresh]);
 
   const handleDelete = (r: HealthRecord) => {
-    Alert.alert("刪除這筆紀錄？", `${r.type?.label ?? ""} · ${r.recorded_at}`, [
-      { text: "取消", style: "cancel" },
-      {
-        text: "刪除",
-        style: "destructive",
-        onPress: async () => {
-          const ok = await deleteRecord(r.id);
-          if (ok) refresh();
-        },
+    confirmAction({
+      title: "刪除這筆紀錄？",
+      message: `${r.type?.label ?? ""} · ${r.recorded_at}`,
+      confirmText: "刪除",
+      destructive: true,
+      onConfirm: async () => {
+        const ok = await deleteRecord(r.id);
+        if (ok) refresh();
       },
-    ]);
+    });
   };
 
   return (
@@ -112,7 +112,7 @@ export default function HealthScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <HealthRow record={item} onLongPress={() => handleDelete(item)} />
+          <HealthRow record={item} onDelete={() => handleDelete(item)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
       />
@@ -167,10 +167,10 @@ function FilterChip({
 
 function HealthRow({
   record,
-  onLongPress,
+  onDelete,
 }: {
   record: HealthRecord;
-  onLongPress: () => void;
+  onDelete: () => void;
 }) {
   const t = record.type;
   const valueText =
@@ -179,11 +179,7 @@ function HealthRow({
       : null;
 
   return (
-    <TouchableOpacity
-      style={styles.row}
-      onLongPress={onLongPress}
-      activeOpacity={0.7}
-    >
+    <View style={styles.row}>
       <View
         style={[
           styles.rowIconWrap,
@@ -213,7 +209,15 @@ function HealthRow({
           ) : null}
         </View>
       </View>
-    </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDelete}
+        hitSlop={8}
+        style={styles.deleteBtn}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -257,6 +261,28 @@ function HealthFormModal({
     setNextDueAt("");
   };
 
+  // Switching type usually means a different event; clear type-specific fields
+  // so a stale "建議提前施打" note from a vaccine doesn't bleed into a weight entry.
+  const handleTypeChange = (code: string) => {
+    setTypeCode(code);
+    setTitle("");
+    setNumericValue("");
+    setNotes("");
+    setNextDueAt("");
+  };
+
+  // Accept lenient YYYY-M-D / YYYY-MM-DD; pad to YYYY-MM-DD or return null if invalid.
+  const normalizeDate = (raw: string): string | null => {
+    const m = raw.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return null;
+    const [, y, mo, d] = m;
+    const moPadded = mo.padStart(2, "0");
+    const dPadded = d.padStart(2, "0");
+    // sanity: month 1-12, day 1-31
+    if (+moPadded < 1 || +moPadded > 12 || +dPadded < 1 || +dPadded > 31) return null;
+    return `${y}-${moPadded}-${dPadded}`;
+  };
+
   const submit = async () => {
     if (!typeCode) {
       Alert.alert("請選類型");
@@ -271,26 +297,27 @@ function HealthFormModal({
       return;
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(recordedAt)) {
+    const normalizedRecorded = normalizeDate(recordedAt);
+    if (!normalizedRecorded) {
       Alert.alert("記錄日期格式錯誤", "請用 YYYY-MM-DD（例：2026-04-24）");
       return;
     }
 
     let parsedDue: string | null = null;
-    if (showNextDue && nextDueAt) {
-      // Accept YYYY-MM-DD only
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(nextDueAt)) {
+    if (showNextDue && nextDueAt.trim()) {
+      const normalizedDue = normalizeDate(nextDueAt);
+      if (!normalizedDue) {
         Alert.alert("下次提醒日期格式錯誤", "請用 YYYY-MM-DD（例：2026-12-31）");
         return;
       }
-      parsedDue = nextDueAt;
+      parsedDue = normalizedDue;
     }
 
     setSubmitting(true);
     const created = await createRecord({
       dog_id: dogId,
       type_code: typeCode,
-      recorded_at: recordedAt,
+      recorded_at: normalizedRecorded,
       title,
       numeric_value: showNumeric ? parseFloat(numericValue) : null,
       notes,
@@ -336,7 +363,7 @@ function HealthFormModal({
                 <TouchableOpacity
                   key={t.code}
                   style={[styles.typeOption, active && styles.typeOptionActive]}
-                  onPress={() => setTypeCode(t.code)}
+                  onPress={() => handleTypeChange(t.code)}
                   activeOpacity={0.85}
                 >
                   <Text style={styles.typeOptionIcon}>{t.icon ?? "🩺"}</Text>
@@ -507,6 +534,12 @@ const styles = StyleSheet.create({
   rowMeta: { marginTop: 2, flexDirection: "row" },
   rowDate: { fontSize: 11, color: colors.textSecondary },
   rowDue: { fontSize: 11, color: colors.textSecondary },
+  deleteBtn: {
+    padding: spacing.sm,
+    borderRadius: radii.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   emptyWrap: { alignItems: "center", paddingTop: 80, paddingHorizontal: spacing.lg },
   emptyEmoji: { fontSize: 56, marginBottom: spacing.md },

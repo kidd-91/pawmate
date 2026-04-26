@@ -105,3 +105,54 @@
 | 記帳走多狗 + 多人 schema 但 UI 簡化 | 上架後加複雜模式不用 migration |
 | 不做 pet_owners | 使用者目前只需一狗一主，YAGNI |
 | 發票先做電子發票 QR | 台灣使用者體感好、免費、離線、100% 準確 |
+
+---
+
+## 八、暫停點 (2026-04-26)
+
+開發暫停以投入新專案。對應 git tag：`v0.1-pause-2026-04-26`。
+
+### 已完成
+- ✅ Phase 1 全部 schema migrations（008-011）已上 production Supabase
+- ✅ Phase 2.1：4-tab 結構（探索 / 聊天 / 狗狗 / 我）
+- ✅ Phase 2.2：探索頁整合（segmented control 滑卡/附近）+ 喜歡你列表 + 探索 header 紅心 badge
+- ✅ Phase 2.3：記帳功能（backend + UI + 已驗證可新增/刪除）
+- ✅ Phase 2.4：健康追蹤（backend + UI + migration 012 移除驅蟲加其他）
+- ✅ 跨平台確認對話框 `lib/confirm.ts`、刪除按鈕
+
+### 暫停時待做
+- ⏸️ Phase 2.5：通知中心（聚合健康提醒到期 + likes-you pending，加 🔔 badge 在 tab header）
+- ⏸️ Phase 2.6：移除揪團 UI（DB 表保留）
+- ⏸️ Phase 3：推播通知（需 Apple Developer $99 + expo-notifications）
+
+### 暫停期間平台狀態
+- **GitHub**：永久保存
+- **Supabase 免費**：⚠️ **7 天無 API 請求會自動暫停**；資料已 dump 到 `backups/` 作為保險。90 天無使用可能被刪
+- **Render 免費**：15 分鐘 idle 進入 sleep；90 天無 deploy 可能被刪。code 在 git，重新 connect 即可
+- **Apple Developer**：未付費
+
+### 回來時的復活流程
+
+```bash
+# 1. 拉最新 code（其實 push 之後沒人改，這步只是 sanity check）
+cd /Users/kidd/Projects/pawmate
+git pull
+
+# 2. 看 Supabase 狀態：dashboard.supabase.com → 如果 paused，按 restore
+# 3. 看 Render：dashboard.render.com → 如果 service 不見，從 GitHub 重新 connect
+
+# 4. 復原本地 dev
+npm install
+npx expo start
+# 按 s 切到 Expo Go 模式 → 按 w 開瀏覽器（或按 i 開 Simulator 如果 Xcode 已裝完）
+
+# 5. 如果 Supabase 整個 project 被刪，要從 backup 還原：
+#    新建 supabase project → supabase link → supabase db push（跑所有 migration）
+#    → 把 backups/pawmate-2026-04-26.sql 的 data 部分 import
+```
+
+### 暫停前要記得（給未來的我）
+- `.env` 內容已存到密碼管理器（手動，不在 git 裡）
+- `backups/pawmate-2026-04-26.sql` 是 schema + data 的完整 dump
+- Memory 還在 `~/.claude/projects/-Users-kidd-Projects-pawmate/memory/`，新對話會自動載入
+- 詳細 user 偏好和決策見 memory：`feedback_keep_flexibility.md`、`project_pawmate_overview.md`

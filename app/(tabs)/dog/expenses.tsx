@@ -14,6 +14,7 @@ import {
 import { Text, Modal, Portal, Button } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { confirmAction } from "../../../lib/confirm";
 import { colors, spacing, radii, shadows } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useExpenseStore } from "../../../stores/expenseStore";
@@ -68,21 +69,16 @@ export default function ExpensesScreen() {
   }, [refresh]);
 
   const handleDelete = (e: DogExpense) => {
-    Alert.alert(
-      "刪除這筆花費？",
-      `${e.category?.name ?? "分類"} · NT$ ${Math.round(Number(e.amount)).toLocaleString()}`,
-      [
-        { text: "取消", style: "cancel" },
-        {
-          text: "刪除",
-          style: "destructive",
-          onPress: async () => {
-            const ok = await deleteExpense(e.id);
-            if (ok) refresh();
-          },
-        },
-      ]
-    );
+    confirmAction({
+      title: "刪除這筆花費？",
+      message: `${e.category?.name ?? "分類"} · NT$ ${Math.round(Number(e.amount)).toLocaleString()}`,
+      confirmText: "刪除",
+      destructive: true,
+      onConfirm: async () => {
+        const ok = await deleteExpense(e.id);
+        if (ok) refresh();
+      },
+    });
   };
 
   return (
@@ -136,7 +132,7 @@ export default function ExpensesScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <ExpenseRow expense={item} onLongPress={() => handleDelete(item)} />
+          <ExpenseRow expense={item} onDelete={() => handleDelete(item)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
       />
@@ -165,18 +161,14 @@ export default function ExpensesScreen() {
 
 function ExpenseRow({
   expense,
-  onLongPress,
+  onDelete,
 }: {
   expense: DogExpense;
-  onLongPress: () => void;
+  onDelete: () => void;
 }) {
   const amount = Number(expense.amount) * Number(expense.share_ratio ?? 1);
   return (
-    <TouchableOpacity
-      style={styles.expenseRow}
-      onLongPress={onLongPress}
-      activeOpacity={0.7}
-    >
+    <View style={styles.expenseRow}>
       <View
         style={[
           styles.expenseIconWrap,
@@ -200,7 +192,15 @@ function ExpenseRow({
       <Text style={styles.expenseAmount}>
         NT$ {Math.round(amount).toLocaleString()}
       </Text>
-    </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDelete}
+        hitSlop={8}
+        style={styles.deleteBtn}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -414,7 +414,14 @@ const styles = StyleSheet.create({
   expenseTitle: { fontSize: 15, fontWeight: "700", color: colors.text },
   expenseNotes: { marginTop: 2, fontSize: 12, color: colors.text },
   expenseDate: { marginTop: 2, fontSize: 11, color: colors.textSecondary },
-  expenseAmount: { fontSize: 16, fontWeight: "700", color: colors.text },
+  expenseAmount: { fontSize: 16, fontWeight: "700", color: colors.text, marginLeft: spacing.sm },
+  deleteBtn: {
+    padding: spacing.sm,
+    borderRadius: radii.full,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.xs,
+  },
 
   emptyWrap: {
     alignItems: "center",
