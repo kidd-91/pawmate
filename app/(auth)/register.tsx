@@ -73,7 +73,7 @@ export default function RegisterScreen() {
               <View style={styles.logoCircle}>
                 <Text style={styles.logo}>🐶</Text>
               </View>
-              <Text style={styles.title}>加入 PawMate</Text>
+              <Text style={styles.title}>加入 DogBond</Text>
               <Text style={styles.subtitle}>為你的毛孩找到新朋友</Text>
             </View>
 

@@ -34,5 +34,5 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/health", healthRoutes);
 
 app.listen(PORT, () => {
-  console.log(`PawMate API running on port ${PORT}`);
+  console.log(`DogBond API running on port ${PORT}`);
 });

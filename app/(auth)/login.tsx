@@ -78,7 +78,7 @@ export default function LoginScreen() {
             <View style={styles.logoCircle}>
               <Text style={styles.logo}>🐾</Text>
             </View>
-            <Text style={styles.title}>PawMate</Text>
+            <Text style={styles.title}>DogBond</Text>
             <Text style={styles.subtitle}>找到狗狗的最佳玩伴</Text>
           </Animated.View>
 
