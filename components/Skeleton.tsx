@@ -76,22 +76,6 @@ export function ChatItemSkeleton() {
   );
 }
 
-export function MatchCardSkeleton() {
-  return (
-    <View style={skeletonStyles.matchCard}>
-      <Skeleton width={80} height={80} borderRadius={16} />
-      <View style={skeletonStyles.matchInfo}>
-        <Skeleton width={100} height={20} borderRadius={10} />
-        <Skeleton width={140} height={14} borderRadius={7} style={{ marginTop: 6 }} />
-        <View style={skeletonStyles.tags}>
-          <Skeleton width={44} height={22} borderRadius={11} />
-          <Skeleton width={44} height={22} borderRadius={11} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
 const skeletonStyles = StyleSheet.create({
   card: {
     borderRadius: 24,
@@ -117,16 +101,5 @@ const skeletonStyles = StyleSheet.create({
   },
   chatInfo: {
     flex: 1,
-  },
-  matchCard: {
-    flexDirection: "row",
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 16,
-    gap: 16,
-  },
-  matchInfo: {
-    flex: 1,
-    justifyContent: "center",
   },
 });

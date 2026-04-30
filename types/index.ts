@@ -91,45 +91,6 @@ export const WALKING_FREQUENCY_OPTIONS = [
   { label: "偶爾", value: "occasionally" },
 ] as const;
 
-export interface WalkGroup {
-  id: string;
-  creator_id: string;
-  creator_dog_id: string;
-  title: string;
-  location: string;
-  walk_date: string;
-  walk_time: string;
-  notes: string;
-  max_members: number;
-  is_active: boolean;
-  created_at: string;
-  // joined
-  creator_dog?: Dog;
-  members?: WalkGroupMember[];
-  member_count?: number;
-}
-
-export interface WalkGroupMember {
-  id: string;
-  group_id: string;
-  user_id: string;
-  dog_id: string;
-  status: "pending" | "approved" | "rejected";
-  joined_at: string;
-  // joined
-  dog?: Dog;
-  profile?: Profile;
-}
-
-export interface WalkGroupMessage {
-  id: string;
-  group_id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  sender?: Profile;
-}
-
 // ============================================================================
 // Expenses
 // ============================================================================
