@@ -32,6 +32,7 @@ interface HealthState {
   fetchLatestWeight: (dogId: string) => Promise<void>;
   createRecord: (input: CreateHealthRecordInput) => Promise<HealthRecord | null>;
   deleteRecord: (id: string) => Promise<boolean>;
+  dismissReminder: (recordId: string) => Promise<boolean>;
 }
 
 export const useHealthStore = create<HealthState>((set) => ({
@@ -97,6 +98,18 @@ export const useHealthStore = create<HealthState>((set) => ({
     try {
       await api.delete(`/api/health/${id}`);
       set((s) => ({ records: s.records.filter((r) => r.id !== id) }));
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  dismissReminder: async (recordId) => {
+    try {
+      await api.post(`/api/health/reminders/${recordId}/dismiss`, {});
+      set((s) => ({
+        reminders: s.reminders.filter((r) => r.record_id !== recordId),
+      }));
       return true;
     } catch {
       return false;

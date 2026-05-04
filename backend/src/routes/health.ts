@@ -135,6 +135,42 @@ router.delete("/:id", async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// Reminders: dismiss a single record's notification (record stays in history,
+// just stops appearing in the bell)
+// ============================================================================
+router.post("/reminders/:id/dismiss", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const { data: existing } = await supabaseAdmin
+    .from("health_records")
+    .select("dog_id, dogs(owner_id)")
+    .eq("id", id)
+    .single();
+
+  if (!existing) {
+    res.status(404).json({ error: "Record not found" });
+    return;
+  }
+  // @ts-ignore — nested join
+  const ownerId = existing.dogs?.owner_id;
+  if (ownerId !== req.userId) {
+    res.status(403).json({ error: "Not your dog" });
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("health_records")
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+  res.json({ message: "Dismissed" });
+});
+
+// ============================================================================
 // Reminders: upcoming health events for the user's dogs
 // ============================================================================
 router.get("/reminders", async (req: Request, res: Response) => {

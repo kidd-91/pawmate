@@ -25,13 +25,15 @@ interface NotificationItem {
   // sort key: lower = more urgent
   urgency: number;
   onPress: () => void;
+  // health reminders only — null for likes-you
+  recordId?: string;
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const { myDog } = useAuthStore();
   const { likesYou, fetchLikesYou } = useMatchStore();
-  const { reminders, fetchReminders } = useHealthStore();
+  const { reminders, fetchReminders, dismissReminder } = useHealthStore();
 
   const refresh = useCallback(async () => {
     if (myDog) await fetchLikesYou(myDog.id);
@@ -62,6 +64,7 @@ export default function NotificationsScreen() {
 
     reminders.forEach((r) => {
       const urgent = r.days_until <= 7;
+      const overdue = r.days_until < 0;
       items.push({
         id: `reminder-${r.record_id}`,
         icon: urgent ? "⏰" : "📅",
@@ -69,13 +72,16 @@ export default function NotificationsScreen() {
         iconBg: urgent ? "rgba(255,107,107,0.12)" : "rgba(255,140,105,0.12)",
         title: `${r.dog_name} 的 ${r.type_label}${r.title ? ` · ${r.title}` : ""}`,
         subtitle:
-          r.days_until <= 0
+          overdue
+            ? `已過 ${-r.days_until} 天 (${r.next_due_at})`
+            : r.days_until === 0
             ? "今天到期"
             : r.days_until === 1
             ? "明天到期"
             : `${r.days_until} 天後到期 (${r.next_due_at})`,
         urgency: urgent ? 0 : 2,
         onPress: () => router.push("/(tabs)/dog/health"),
+        recordId: r.record_id,
       });
     });
 
@@ -122,11 +128,28 @@ export default function NotificationsScreen() {
               <Text style={styles.rowTitle}>{item.title}</Text>
               <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
             </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={20}
-              color={colors.textSecondary}
-            />
+            {item.recordId ? (
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  dismissReminder(item.recordId!);
+                }}
+                hitSlop={8}
+                style={styles.dismissBtn}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            ) : (
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={20}
+                color={colors.textSecondary}
+              />
+            )}
           </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
@@ -186,5 +209,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
+  },
+  dismissBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: colors.background,
   },
 });
