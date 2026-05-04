@@ -20,11 +20,9 @@ router.post("/register", async (req: Request, res: Response) => {
     return;
   }
 
-  if (data.user) {
-    await supabaseAdmin
-      .from("profiles")
-      .insert({ id: data.user.id, display_name: displayName });
-  }
+  // profiles row is now created automatically by the on_auth_user_created
+  // trigger (migration 014) — no manual insert needed here. The trigger
+  // pulls display_name from raw_user_meta_data which we set above.
 
   res.json({ user: data.user, needsVerification: !data.session });
 });

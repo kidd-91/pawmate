@@ -12,7 +12,9 @@ import { Text, TextInput, Button } from "react-native-paper";
 import { Link } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "../../lib/api";
+import { signInWithGoogle } from "../../lib/googleAuth";
 import { colors, spacing } from "../../constants/theme";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState("");
@@ -54,6 +56,14 @@ export default function RegisterScreen() {
       setError(e.message || "註冊失敗");
     }
 
+    setLoading(false);
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    setError("");
+    const { error: e } = await signInWithGoogle();
+    if (e) setError(e);
     setLoading(false);
   };
 
@@ -127,6 +137,26 @@ export default function RegisterScreen() {
                 labelStyle={styles.buttonLabel}
               >
                 建立帳號
+              </Button>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>或</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <Button
+                mode="outlined"
+                onPress={handleGoogle}
+                disabled={loading}
+                style={styles.googleButton}
+                textColor={colors.text}
+                icon={() => (
+                  <MaterialCommunityIcons name="google" size={20} color="#DB4437" />
+                )}
+                labelStyle={styles.googleButtonLabel}
+              >
+                用 Google 註冊
               </Button>
 
               <Link href="/(auth)/login" asChild>
@@ -213,6 +243,31 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: 16,
     fontWeight: "bold",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: spacing.sm,
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  googleButton: {
+    marginBottom: spacing.sm,
+    borderRadius: 25,
+    paddingVertical: 4,
+    borderColor: colors.border,
+  },
+  googleButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600",
   },
   paw1: {
     position: "absolute",
