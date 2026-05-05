@@ -1,0 +1,13 @@
+title: DogBond
+description: 為養狗的人打造的社交 App
+theme: minima
+
+# Internal planning doc — keep out of the public site
+exclude:
+  - redesign-plan.md
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: page
