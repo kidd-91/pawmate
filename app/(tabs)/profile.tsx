@@ -23,6 +23,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing } from "../../constants/theme";
 import { supabase } from "../../lib/supabase";
 import { api } from "../../lib/api";
+import { confirmAction } from "../../lib/confirm";
 import { useAuthStore } from "../../stores/authStore";
 import {
   PERSONALITY_OPTIONS,
@@ -37,7 +38,7 @@ import DogCard from "../../components/DogCard";
 import PawBackground from "../../components/PawBackground";
 
 export default function ProfileScreen() {
-  const { session, profile, myDog, fetchProfile, fetchMyDog, signOut } =
+  const { session, profile, myDog, fetchProfile, fetchMyDog, signOut, deleteAccount } =
     useAuthStore();
 
   const [name, setName] = useState("");
@@ -255,6 +256,35 @@ export default function ProfileScreen() {
     } catch {}
     await fetchProfile();
     setEditingName(false);
+  };
+
+  // Two-step confirm — first dialog explains what gets deleted, second
+  // requires the user to actively press the destructive option. _layout
+  // detects the cleared session and routes to /login automatically.
+  const handleDeleteAccount = () => {
+    confirmAction({
+      title: "刪除帳號",
+      message:
+        "確定要刪除你的 DogBond 帳號嗎？\n\n下列資料將永久刪除，無法復原：\n• 個人資料與狗狗檔案\n• 所有配對與聊天紀錄\n• 健康紀錄與提醒\n• 記帳紀錄",
+      confirmText: "我了解，繼續",
+      cancelText: "取消",
+      destructive: true,
+      onConfirm: () => {
+        confirmAction({
+          title: "最後確認",
+          message: "刪除後無法復原，真的要繼續嗎？",
+          confirmText: "永久刪除帳號",
+          cancelText: "取消",
+          destructive: true,
+          onConfirm: async () => {
+            const { error } = await deleteAccount();
+            if (error) {
+              Alert.alert("刪除失敗", error);
+            }
+          },
+        });
+      },
+    });
   };
 
   return (
@@ -743,6 +773,14 @@ export default function ProfileScreen() {
         {myDog ? "儲存變更" : "建立檔案"}
       </Button>
 
+      {/* Danger zone — account deletion (Google Play 2024 requirement) */}
+      <View style={styles.dangerZone}>
+        <Text style={styles.dangerHint}>不想再用 DogBond 了？</Text>
+        <TouchableOpacity onPress={handleDeleteAccount} hitSlop={8}>
+          <Text style={styles.dangerLink}>刪除我的帳號與所有資料</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Preview Modal */}
       <Portal>
         <Modal
@@ -1111,5 +1149,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  dangerZone: {
+    marginTop: spacing.xl,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 6,
+  },
+  dangerHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  dangerLink: {
+    fontSize: 13,
+    color: colors.like,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

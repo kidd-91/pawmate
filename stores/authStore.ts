@@ -13,6 +13,7 @@ interface AuthState {
   fetchProfile: () => Promise<void>;
   fetchMyDog: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ error?: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -40,5 +41,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     set({ session: null, profile: null, myDog: null });
+  },
+
+  deleteAccount: async () => {
+    try {
+      await api.delete("/api/auth/me");
+      await supabase.auth.signOut();
+      set({ session: null, profile: null, myDog: null });
+      return {};
+    } catch (e: any) {
+      return { error: e.message || "刪除失敗" };
+    }
   },
 }));

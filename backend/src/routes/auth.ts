@@ -65,4 +65,22 @@ router.get("/me", authMiddleware, async (req: Request, res: Response) => {
   res.json(profile);
 });
 
+// Delete the authenticated user's entire account.
+// auth.users → profiles → dogs → (swipes/matches/messages/expenses/health)
+// all cascade via FK ON DELETE CASCADE, so a single admin.deleteUser call
+// is enough. (Storage objects in Supabase Storage are not cascaded — left
+// for a future cleanup job; they're orphaned but inaccessible without an
+// owner row.)
+//
+// Required by Google Play 2024 policy: apps that allow account creation
+// must offer in-app account deletion.
+router.delete("/me", authMiddleware, async (req: Request, res: Response) => {
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(req.userId!);
+  if (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+  res.json({ message: "Account deleted" });
+});
+
 export default router;
