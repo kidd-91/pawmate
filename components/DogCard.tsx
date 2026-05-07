@@ -8,7 +8,7 @@ import type { Dog } from "../types";
 
 const { width, height } = Dimensions.get("window");
 const CARD_WIDTH = Math.min(width - spacing.lg * 2, 400);
-const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.3);
+const CARD_HEIGHT = Math.min(height * 0.6, CARD_WIDTH * 1.2);
 
 interface DogCardProps {
   dog: Dog;
