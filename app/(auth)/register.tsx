@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { api } from "../../lib/api";
 import { signInWithGoogle } from "../../lib/googleAuth";
 import { colors, spacing } from "../../constants/theme";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { GoogleIcon } from "../../components/GoogleIcon";
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState("");
@@ -151,9 +151,7 @@ export default function RegisterScreen() {
                 disabled={loading}
                 style={styles.googleButton}
                 textColor={colors.text}
-                icon={() => (
-                  <MaterialCommunityIcons name="google" size={20} color="#DB4437" />
-                )}
+                icon={() => <GoogleIcon size={20} />}
                 labelStyle={styles.googleButtonLabel}
               >
                 用 Google 註冊
