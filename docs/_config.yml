@@ -2,9 +2,10 @@ title: DogBond
 description: 為養狗的人打造的社交 App
 theme: minima
 
-# Internal planning doc — keep out of the public site
+# Internal planning docs — keep out of the public site
 exclude:
   - redesign-plan.md
+  - play-store-listing.md
 
 defaults:
   - scope:
