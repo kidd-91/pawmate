@@ -6,6 +6,7 @@ theme: minima
 exclude:
   - redesign-plan.md
   - play-store-listing.md
+  - architecture.md
 
 defaults:
   - scope:
