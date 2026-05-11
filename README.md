@@ -10,6 +10,7 @@
 [![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?logo=supabase)](https://supabase.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [隱私權政策](https://kidd-91.github.io/pawmate/legal/privacy/) · [服務條款](https://kidd-91.github.io/pawmate/legal/terms/) · [技術文件](docs/architecture.md) · [視覺化架構](docs/architecture-diagrams.md)
 
@@ -142,6 +143,13 @@ eas build --platform android --profile production
 - 全資料表開啟 Row Level Security
 - 使用者可隨時 in-app 刪除帳號（CASCADE 連動清光所有資料）
 - 詳見 [隱私權政策](https://kidd-91.github.io/pawmate/legal/privacy/)
+
+---
+
+## 📜 授權
+
+採用 [MIT License](LICENSE) — 你可以自由使用、修改、散布本專案的程式碼，但不附帶任何擔保。
+請保留版權聲明。
 
 ---
 
