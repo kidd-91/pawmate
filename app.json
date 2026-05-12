@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DogBond",
-    "slug": "dogbond",
+    "slug": "pawmate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

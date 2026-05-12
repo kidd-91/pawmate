@@ -30,6 +30,11 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ykckeqhmyligkskpvhrr.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrY2tlcWhteWxpZ2tza3B2aHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5OTE2MDIsImV4cCI6MjA5MTU2NzYwMn0.hnRMP4xcpRskABcBHWMoOuK2lTVd4GHH1xwVuqsrPas",
+        "EXPO_PUBLIC_API_URL": "https://pawmate-api.onrender.com"
       }
     }
   },
