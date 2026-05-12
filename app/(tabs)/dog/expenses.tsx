@@ -18,6 +18,7 @@ import { confirmAction } from "../../../lib/confirm";
 import { colors, spacing, radii, shadows } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useExpenseStore } from "../../../stores/expenseStore";
+import { useKeyboardHeight } from "../../../lib/useKeyboardHeight";
 import PawBackground from "../../../components/PawBackground";
 import type { DogExpense, ExpenseCategory } from "../../../types";
 
@@ -37,15 +38,32 @@ export default function ExpensesScreen() {
   const [showForm, setShowForm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const monthRange = useMemo(() => {
+  // User-selectable month. Defaults to current month; ◀ ▶ buttons let
+  // the user walk through history without losing access to older data.
+  const [view, setView] = useState(() => {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  });
+
+  const monthRange = useMemo(() => {
+    const { year: y, month: m } = view;
     const from = `${y}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(y, m, 0).getDate();
     const to = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     return { from, to, year: y, month: m };
-  }, []);
+  }, [view]);
+
+  const shiftMonth = (delta: -1 | 1) => {
+    setView((v) => {
+      const next = new Date(v.year, v.month - 1 + delta, 1);
+      return { year: next.getFullYear(), month: next.getMonth() + 1 };
+    });
+  };
+
+  const isCurrentMonth = useMemo(() => {
+    const now = new Date();
+    return view.year === now.getFullYear() && view.month === now.getMonth() + 1;
+  }, [view]);
 
   const refresh = useCallback(async () => {
     if (!myDog) return;
@@ -93,12 +111,39 @@ export default function ExpensesScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{monthRange.year}/{String(monthRange.month).padStart(2, "0")} 花費</Text>
+        <Text style={styles.headerTitle}>花費紀錄</Text>
         <View style={styles.headerBtn} />
       </View>
 
+      <View style={styles.monthBar}>
+        <TouchableOpacity
+          onPress={() => shiftMonth(-1)}
+          hitSlop={12}
+          style={styles.monthArrow}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.monthLabel}>
+          {monthRange.year} 年 {monthRange.month} 月
+        </Text>
+        <TouchableOpacity
+          onPress={() => shiftMonth(1)}
+          hitSlop={12}
+          style={[styles.monthArrow, isCurrentMonth && styles.monthArrowDisabled]}
+          disabled={isCurrentMonth}
+        >
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={24}
+            color={isCurrentMonth ? colors.textSecondary : colors.text}
+          />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>本月總花費</Text>
+        <Text style={styles.totalLabel}>
+          {isCurrentMonth ? "本月總花費" : `${monthRange.month} 月總花費`}
+        </Text>
         <Text style={styles.totalValue}>
           NT$ {Math.round(summary?.total ?? 0).toLocaleString()}
         </Text>
@@ -127,8 +172,12 @@ export default function ExpensesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyEmoji}>💸</Text>
-            <Text style={styles.emptyTitle}>本月還沒有花費紀錄</Text>
-            <Text style={styles.emptyText}>點右下角 + 新增第一筆</Text>
+            <Text style={styles.emptyTitle}>
+              {isCurrentMonth ? "本月還沒有花費紀錄" : `${monthRange.month} 月沒有花費紀錄`}
+            </Text>
+            <Text style={styles.emptyText}>
+              {isCurrentMonth ? "點右下角 + 新增第一筆" : "可以用上方箭頭切換月份"}
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -223,6 +272,7 @@ function ExpenseFormModal({
   const [notes, setNotes] = useState("");
   const [merchant, setMerchant] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const reset = () => {
     setCategoryId(null);
@@ -272,7 +322,7 @@ function ExpenseFormModal({
         contentContainerStyle={styles.modal}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ width: "100%", maxHeight: "90%" }}
         >
           <View style={styles.modalHeader}>
@@ -282,7 +332,11 @@ function ExpenseFormModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: keyboardHeight }}
+          >
 
           <Text style={styles.formLabel}>類別</Text>
           <ScrollView
@@ -372,6 +426,33 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   headerTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
+
+  monthBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.lg,
+  },
+  monthArrow: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+  },
+  monthArrowDisabled: {
+    opacity: 0.4,
+  },
+  monthLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+    minWidth: 110,
+    textAlign: "center",
+  },
 
   totalCard: {
     marginHorizontal: spacing.md,

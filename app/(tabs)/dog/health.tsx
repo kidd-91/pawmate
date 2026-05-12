@@ -18,6 +18,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { colors, spacing, radii, shadows } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useHealthStore } from "../../../stores/healthStore";
+import { useKeyboardHeight } from "../../../lib/useKeyboardHeight";
 import PawBackground from "../../../components/PawBackground";
 import type { HealthRecord, HealthRecordType } from "../../../types";
 
@@ -244,6 +245,7 @@ function HealthFormModal({
   const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 10));
   const [nextDueAt, setNextDueAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const selectedType = types.find((t) => t.code === typeCode) ?? null;
   // Numeric input only makes sense for types with a unit (e.g., weight kg)
@@ -341,7 +343,7 @@ function HealthFormModal({
         contentContainerStyle={styles.modal}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ width: "100%", maxHeight: "90%" }}
         >
           <View style={styles.modalHeader}>
@@ -351,7 +353,11 @@ function HealthFormModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: keyboardHeight }}
+          >
 
           <Text style={styles.formLabel}>類型</Text>
           <ScrollView

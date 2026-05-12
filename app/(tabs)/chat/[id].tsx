@@ -15,6 +15,7 @@ import { colors, spacing } from "../../../constants/theme";
 import { useAuthStore } from "../../../stores/authStore";
 import { useMatchStore } from "../../../stores/matchStore";
 import { useChatStore } from "../../../stores/chatStore";
+import { useKeyboardHeight } from "../../../lib/useKeyboardHeight";
 import PawBackground from "../../../components/PawBackground";
 
 export default function ChatRoomScreen() {
@@ -88,11 +89,16 @@ export default function ChatRoomScreen() {
   };
 
   const myUserId = session?.user?.id;
+  const keyboardHeight = useKeyboardHeight();
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      // iOS handles padding natively; on Android we apply keyboardHeight
+      // as bottom padding to the input bar below, which sidesteps the
+      // edgeToEdge / new-arch quirks where behavior="height" doesn't
+      // actually move the input above the keyboard.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
       <PawBackground />
@@ -148,7 +154,15 @@ export default function ChatRoomScreen() {
         }}
       />
 
-      <View style={styles.inputBar}>
+      <View
+        style={[
+          styles.inputBar,
+          // Android: shove the input bar up by the keyboard height so
+          // it sits exactly above the keyboard. iOS already handles
+          // this via KeyboardAvoidingView padding.
+          Platform.OS === "android" && { paddingBottom: spacing.sm + keyboardHeight },
+        ]}
+      >
         <TextInput
           value={text}
           onChangeText={setText}
