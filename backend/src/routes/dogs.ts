@@ -99,13 +99,25 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 router.put("/:id", async (req: Request, res: Response) => {
-  const { data: existing } = await supabaseAdmin
+  // maybeSingle (not single) so a missing dog id returns 404 with a
+  // clear message instead of bubbling Postgrest's "Cannot coerce the
+  // result to a single JSON object" up to the client as a generic
+  // "儲存失敗".
+  const { data: existing, error: lookupError } = await supabaseAdmin
     .from("dogs")
     .select("owner_id")
     .eq("id", req.params.id)
-    .single();
+    .maybeSingle();
 
-  if (existing?.owner_id !== req.userId) {
+  if (lookupError) {
+    res.status(400).json({ error: lookupError.message });
+    return;
+  }
+  if (!existing) {
+    res.status(404).json({ error: "Dog not found" });
+    return;
+  }
+  if (existing.owner_id !== req.userId) {
     res.status(403).json({ error: "Not your dog" });
     return;
   }
@@ -115,10 +127,14 @@ router.put("/:id", async (req: Request, res: Response) => {
     .update(req.body)
     .eq("id", req.params.id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     res.status(400).json({ error: error.message });
+    return;
+  }
+  if (!data) {
+    res.status(500).json({ error: "Update returned no row" });
     return;
   }
 

@@ -15,7 +15,18 @@ export default function RootLayout() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        const { fetchProfile, fetchMyDog } = useAuthStore.getState();
         setSession(session);
+        // After every auth transition (including initial restore from
+        // AsyncStorage), pull the user's profile + their dog from the
+        // server. Without this, screens that depend on myDog.id —
+        // chat list / matches — stay empty until the user happens to
+        // navigate to a tab that fetches it themselves, which made
+        // matches appear to disappear after our store-reset fix.
+        if (session?.user?.id) {
+          fetchProfile();
+          fetchMyDog();
+        }
       }
     );
     return () => subscription.unsubscribe();
