@@ -99,15 +99,16 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 router.put("/:id", async (req: Request, res: Response) => {
-  // maybeSingle (not single) so a missing dog id returns 404 with a
-  // clear message instead of bubbling Postgrest's "Cannot coerce the
-  // result to a single JSON object" up to the client as a generic
-  // "儲存失敗".
+  console.log(`[dogs PUT] id=${req.params.id} userId=${req.userId}`);
+  console.log(`[dogs PUT] body keys=${Object.keys(req.body).join(",")}`);
+
   const { data: existing, error: lookupError } = await supabaseAdmin
     .from("dogs")
-    .select("owner_id")
+    .select("id, owner_id, is_active")
     .eq("id", req.params.id)
     .maybeSingle();
+
+  console.log(`[dogs PUT] lookup existing=${JSON.stringify(existing)} error=${lookupError?.message}`);
 
   if (lookupError) {
     res.status(400).json({ error: lookupError.message });
@@ -122,12 +123,21 @@ router.put("/:id", async (req: Request, res: Response) => {
     return;
   }
 
+  // Strip fields that shouldn't be writable through this endpoint —
+  // anything client-supplied for owner_id / id / created_at would
+  // either be ignored or wreck the row. Also drop the joined `owner`
+  // object if it leaked back from a previous fetchMyDog.
+  const { id: _id, owner_id: _o, created_at: _c, owner: _ow, ...updates } = req.body;
+  console.log(`[dogs PUT] sanitized update keys=${Object.keys(updates).join(",")}`);
+
   const { data, error } = await supabaseAdmin
     .from("dogs")
-    .update(req.body)
+    .update(updates)
     .eq("id", req.params.id)
     .select()
     .maybeSingle();
+
+  console.log(`[dogs PUT] update result data=${data ? "row" : "null"} error=${error?.message}`);
 
   if (error) {
     res.status(400).json({ error: error.message });
