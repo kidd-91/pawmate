@@ -8,10 +8,14 @@ router.use(authMiddleware);
 router.put("/", async (req: Request, res: Response) => {
   const { display_name } = req.body;
 
+  // UPSERT instead of UPDATE — old accounts that pre-date the
+  // handle_new_user trigger (migration 014) may not have a profiles row
+  // yet. UPDATE on a missing row + .single() throws "Cannot coerce the
+  // result to a single JSON object", which is what users were seeing on
+  // 「儲存失敗」.
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .update({ display_name })
-    .eq("id", req.userId!)
+    .upsert({ id: req.userId!, display_name }, { onConflict: "id" })
     .select()
     .single();
 

@@ -33,6 +33,7 @@ interface HealthState {
   createRecord: (input: CreateHealthRecordInput) => Promise<HealthRecord | null>;
   deleteRecord: (id: string) => Promise<boolean>;
   dismissReminder: (recordId: string) => Promise<boolean>;
+  reset: () => void;
 }
 
 export const useHealthStore = create<HealthState>((set) => ({
@@ -41,6 +42,8 @@ export const useHealthStore = create<HealthState>((set) => ({
   reminders: [],
   latestWeight: null,
   loading: false,
+
+  reset: () => set({ records: [], reminders: [], latestWeight: null, loading: false }),
 
   fetchTypes: async () => {
     try {

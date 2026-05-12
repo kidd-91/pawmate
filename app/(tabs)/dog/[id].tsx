@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Text, Chip, Button } from "react-native-paper";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../../../constants/theme";
@@ -32,12 +32,18 @@ export default function DogProfileScreen() {
   const [relation, setRelation] = useState<RelationStatus>("none");
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchDog();
-      if (myDog) checkRelation();
-    }
-  }, [id]);
+  // useFocusEffect (not useEffect) so we re-check relation every time the
+  // page is focused — handles the case where user likes from nearby list
+  // then taps card immediately (swipe POST may finish after navigation, or
+  // user re-enters the same id and the original effect doesn't re-run).
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        fetchDog();
+        if (myDog) checkRelation();
+      }
+    }, [id, myDog?.id])
+  );
 
   const fetchDog = async () => {
     try {

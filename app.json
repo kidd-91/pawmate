@@ -21,7 +21,8 @@
     },
     "android": {
       "package": "com.kidd91.dogbond",
-      "versionCode": 2,
+      "versionCode": 3,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFF5E1"

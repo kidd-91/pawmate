@@ -389,6 +389,7 @@ export default function ProfileScreen() {
             <Text style={styles.addPhotoText}>{uploading ? "上傳中..." : "新增照片"}</Text>
           </TouchableOpacity>
         )}
+        <Text style={styles.photoHint}>選好照片後按右下「裁切」即可完成上傳</Text>
       </View>
 
       {/* Name */}
@@ -414,7 +415,12 @@ export default function ProfileScreen() {
           style={styles.input}
           mode="outlined"
           outlineColor={colors.border}
-          right={<TextInput.Icon icon="chevron-down" />}
+          right={
+            <TextInput.Icon
+              icon={showBreeds ? "chevron-up" : "chevron-down"}
+              onPress={() => setShowBreeds(!showBreeds)}
+            />
+          }
         />
       </TouchableOpacity>
       {showBreeds && (
@@ -1031,6 +1037,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
     marginTop: 4,
+  },
+  photoHint: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
   },
   breedGrid: {
     flexDirection: "row",

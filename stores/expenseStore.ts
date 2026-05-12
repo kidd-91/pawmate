@@ -31,6 +31,7 @@ interface ExpenseState {
     icon?: string;
     color?: string;
   }) => Promise<ExpenseCategory | null>;
+  reset: () => void;
 }
 
 export const useExpenseStore = create<ExpenseState>((set, get) => ({
@@ -38,6 +39,8 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   categories: [],
   summary: null,
   loading: false,
+
+  reset: () => set({ expenses: [], summary: null, loading: false }),
 
   fetchCategories: async () => {
     try {

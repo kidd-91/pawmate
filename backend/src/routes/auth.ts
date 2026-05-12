@@ -51,11 +51,14 @@ router.post("/logout", authMiddleware, async (_req: Request, res: Response) => {
 });
 
 router.get("/me", authMiddleware, async (req: Request, res: Response) => {
+  // maybeSingle — old accounts without a profiles row should get null,
+  // not a "Cannot coerce" 400. The client treats null as "needs setup"
+  // and the upsert in PUT /api/profiles will lazy-create on first save.
   const { data: profile, error } = await supabaseAdmin
     .from("profiles")
     .select("*")
     .eq("id", req.userId!)
-    .single();
+    .maybeSingle();
 
   if (error) {
     res.status(400).json({ error: error.message });

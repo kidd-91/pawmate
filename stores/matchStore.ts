@@ -21,6 +21,7 @@ interface MatchState {
   swipe: (myDogId: string, targetDogId: string, direction: "like" | "pass") => Promise<Match | null>;
   fetchMatches: (myDogId: string) => Promise<void>;
   fetchLikesYou: (myDogId: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useMatchStore = create<MatchState>((set) => ({
@@ -28,6 +29,8 @@ export const useMatchStore = create<MatchState>((set) => ({
   matches: [],
   likesYou: [],
   loadingCandidates: false,
+
+  reset: () => set({ candidates: [], matches: [], likesYou: [], loadingCandidates: false }),
 
   fetchCandidates: async (myDogId, myDog) => {
     set({ loadingCandidates: true });

@@ -341,8 +341,8 @@ function HealthFormModal({
         contentContainerStyle={styles.modal}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ width: "100%" }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ width: "100%", maxHeight: "90%" }}
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>新增健康紀錄</Text>
@@ -350,6 +350,8 @@ function HealthFormModal({
               <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
           <Text style={styles.formLabel}>類型</Text>
           <ScrollView
@@ -458,6 +460,7 @@ function HealthFormModal({
           >
             新增
           </Button>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </Portal>

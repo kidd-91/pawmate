@@ -24,7 +24,6 @@ function TabIcon({
       <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
         <MaterialCommunityIcons name={name as any} size={size - 2} color={color} />
       </View>
-      {focused && <View style={styles.activeDot} />}
     </View>
   );
 }
@@ -141,6 +140,19 @@ export default function TabLayout() {
               <TabIcon name="chat-outline" color={color} size={size} focused={focused} />
             ),
           }}
+          listeners={({ navigation, route }) => ({
+            tabPress: (e) => {
+              // Reset to the tab root when re-tapping the active tab,
+              // so opening someone's chat then pressing the chat tab
+              // returns to the chat list (not stays on the open chat).
+              const state = navigation.getState();
+              const current = state.routes[state.index];
+              if (current.name === route.name) {
+                e.preventDefault();
+                navigation.navigate(route.name as never, { screen: "index" } as never);
+              }
+            },
+          })}
         />
         <Tabs.Screen
           name="dog"
@@ -150,6 +162,19 @@ export default function TabLayout() {
               <TabIcon name="dog" color={color} size={size} focused={focused} />
             ),
           }}
+          listeners={({ navigation, route }) => ({
+            tabPress: (e) => {
+              // Same as chat — re-tapping the dog tab pops back to the
+              // owner's own dog dashboard, instead of leaving the user
+              // stuck on someone else's profile page they just viewed.
+              const state = navigation.getState();
+              const current = state.routes[state.index];
+              if (current.name === route.name) {
+                e.preventDefault();
+                navigation.navigate(route.name as never, { screen: "index" } as never);
+              }
+            },
+          })}
         />
         <Tabs.Screen
           name="profile"
@@ -184,13 +209,6 @@ const styles = StyleSheet.create({
   },
   iconWrapActive: {
     backgroundColor: "rgba(255,140,105,0.1)",
-  },
-  activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-    marginTop: 2,
   },
   headerContainer: {
     flexDirection: "row",
