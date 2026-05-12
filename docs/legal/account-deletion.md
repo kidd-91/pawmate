@@ -1,5 +1,7 @@
 ---
-title: 帳號與資料刪除說明 | DogBond
+layout: page
+title: 帳號與資料刪除說明
+permalink: /legal/account-deletion/
 description: 如何刪除你的 DogBond 帳號與所有相關資料
 ---
 
