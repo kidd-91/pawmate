@@ -145,7 +145,14 @@ export default function ChatListScreen() {
               onPress={() => router.push(`/(tabs)/chat/${item.id}`)}
               activeOpacity={0.7}
             >
-              <View style={styles.avatarContainer}>
+              {/* Tap the avatar (not the row) to view the other dog's
+                  profile, leaving the rest of the row to open the chat
+                  as before. */}
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/dog/${otherDog.id}`)}
+                hitSlop={6}
+                activeOpacity={0.7}
+              >
                 <Image
                   source={
                     otherDog.photos?.length > 0
@@ -154,8 +161,7 @@ export default function ChatListScreen() {
                   }
                   style={styles.avatar}
                 />
-                <View style={styles.onlineDot} />
-              </View>
+              </TouchableOpacity>
               <View style={styles.chatInfo}>
                 <View style={styles.topRow}>
                   <Text style={styles.dogName} numberOfLines={1}>{otherDog.name}</Text>
@@ -190,27 +196,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.7)",
   },
-  avatarContainer: {
-    position: "relative",
-    marginRight: spacing.md,
-  },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
     borderColor: "rgba(255,140,105,0.15)",
-  },
-  onlineDot: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: "#FFF",
+    marginRight: spacing.md,
   },
   chatInfo: {
     flex: 1,

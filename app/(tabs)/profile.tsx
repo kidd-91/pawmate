@@ -389,7 +389,9 @@ export default function ProfileScreen() {
             <Text style={styles.addPhotoText}>{uploading ? "上傳中..." : "新增照片"}</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.photoHint}>選好照片後按右下「裁切」即可完成上傳</Text>
+        <Text style={styles.photoHint}>
+          💡 選好照片後請按右上角「裁切」完成上傳（Android 系統按鈕，等同確認）
+        </Text>
       </View>
 
       {/* Name */}
