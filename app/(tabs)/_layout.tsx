@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Tabs, useRouter, router as expoRouter } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -87,6 +87,8 @@ function NotificationsBootstrap() {
 }
 
 export default function TabLayout() {
+  const router = useRouter();
+
   return (
     <>
       <NotificationsBootstrap />
@@ -149,7 +151,7 @@ export default function TabLayout() {
               // which the previous navigation.navigate({ screen: "index" })
               // didn't reliably do across expo-router versions.
               e.preventDefault();
-              expoRouter.replace("/(tabs)/chat");
+              router.replace("/(tabs)/chat");
             },
           })}
         />
@@ -168,7 +170,7 @@ export default function TabLayout() {
               // else's profile they just viewed (the bug where the back
               // arrow appears in a tab that shouldn't have one).
               e.preventDefault();
-              expoRouter.replace("/(tabs)/dog");
+              router.replace("/(tabs)/dog");
             },
           })}
         />
