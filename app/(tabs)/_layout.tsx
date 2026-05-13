@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, useRouter, router as expoRouter } from "expo-router";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -140,17 +140,16 @@ export default function TabLayout() {
               <TabIcon name="chat-outline" color={color} size={size} focused={focused} />
             ),
           }}
-          listeners={({ navigation, route }) => ({
+          listeners={() => ({
             tabPress: (e) => {
-              // Reset to the tab root when re-tapping the active tab,
-              // so opening someone's chat then pressing the chat tab
-              // returns to the chat list (not stays on the open chat).
-              const state = navigation.getState();
-              const current = state.routes[state.index];
-              if (current.name === route.name) {
-                e.preventDefault();
-                navigation.navigate(route.name as never, { screen: "index" } as never);
-              }
+              // Always reset chat tab to the chat list. Without this,
+              // opening someone's chat then tapping the chat tab leaves
+              // you stuck on the open chat. Using expo-router's
+              // router.replace pops the entire stack of this tab,
+              // which the previous navigation.navigate({ screen: "index" })
+              // didn't reliably do across expo-router versions.
+              e.preventDefault();
+              expoRouter.replace("/(tabs)/chat");
             },
           })}
         />
@@ -162,17 +161,14 @@ export default function TabLayout() {
               <TabIcon name="dog" color={color} size={size} focused={focused} />
             ),
           }}
-          listeners={({ navigation, route }) => ({
+          listeners={() => ({
             tabPress: (e) => {
-              // Same as chat — re-tapping the dog tab pops back to the
-              // owner's own dog dashboard, instead of leaving the user
-              // stuck on someone else's profile page they just viewed.
-              const state = navigation.getState();
-              const current = state.routes[state.index];
-              if (current.name === route.name) {
-                e.preventDefault();
-                navigation.navigate(route.name as never, { screen: "index" } as never);
-              }
+              // Re-tapping the dog tab pops back to the owner's own dog
+              // dashboard, instead of leaving the user stuck on someone
+              // else's profile they just viewed (the bug where the back
+              // arrow appears in a tab that shouldn't have one).
+              e.preventDefault();
+              expoRouter.replace("/(tabs)/dog");
             },
           })}
         />
