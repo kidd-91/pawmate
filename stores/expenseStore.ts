@@ -1,4 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../lib/api";
 import type { DogExpense, ExpenseCategory, ExpenseSummary } from "../types";
 
@@ -34,75 +36,89 @@ interface ExpenseState {
   reset: () => void;
 }
 
-export const useExpenseStore = create<ExpenseState>((set, get) => ({
-  expenses: [],
-  categories: [],
-  summary: null,
-  loading: false,
+export const useExpenseStore = create<ExpenseState>()(
+  persist(
+    (set, get) => ({
+      expenses: [],
+      categories: [],
+      summary: null,
+      loading: false,
 
-  reset: () => set({ expenses: [], summary: null, loading: false }),
+      reset: () => set({ expenses: [], summary: null, loading: false }),
 
-  fetchCategories: async () => {
-    try {
-      const data = await api.get<ExpenseCategory[]>("/api/expenses/categories");
-      set({ categories: data ?? [] });
-    } catch {}
-  },
+      fetchCategories: async () => {
+        try {
+          const data = await api.get<ExpenseCategory[]>("/api/expenses/categories");
+          set({ categories: data ?? [] });
+        } catch {}
+      },
 
-  fetchExpenses: async (dogId, opts) => {
-    set({ loading: true });
-    try {
-      const params = new URLSearchParams({ dogId });
-      if (opts?.from) params.set("from", opts.from);
-      if (opts?.to) params.set("to", opts.to);
-      const data = await api.get<DogExpense[]>(`/api/expenses?${params.toString()}`);
-      set({ expenses: data ?? [], loading: false });
-    } catch {
-      set({ loading: false });
+      fetchExpenses: async (dogId, opts) => {
+        set({ loading: true });
+        try {
+          const params = new URLSearchParams({ dogId });
+          if (opts?.from) params.set("from", opts.from);
+          if (opts?.to) params.set("to", opts.to);
+          const data = await api.get<DogExpense[]>(`/api/expenses?${params.toString()}`);
+          set({ expenses: data ?? [], loading: false });
+        } catch {
+          // Don't clobber on transient failure — keep cached expenses.
+          set({ loading: false });
+        }
+      },
+
+      fetchSummary: async (dogId, year, month) => {
+        try {
+          const params = new URLSearchParams({ dogId });
+          if (year) params.set("year", String(year));
+          if (month) params.set("month", String(month));
+          const data = await api.get<ExpenseSummary>(`/api/expenses/summary?${params.toString()}`);
+          set({ summary: data ?? null });
+        } catch {}
+      },
+
+      createExpense: async (input) => {
+        try {
+          const created = await api.post<DogExpense>("/api/expenses", input);
+          if (created) {
+            set((s) => ({ expenses: [created, ...s.expenses] }));
+          }
+          return created ?? null;
+        } catch {
+          return null;
+        }
+      },
+
+      deleteExpense: async (id) => {
+        try {
+          await api.delete(`/api/expenses/${id}`);
+          set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      createCategory: async (input) => {
+        try {
+          const created = await api.post<ExpenseCategory>("/api/expenses/categories", input);
+          if (created) {
+            set((s) => ({ categories: [...s.categories, created] }));
+          }
+          return created ?? null;
+        } catch {
+          return null;
+        }
+      },
+    }),
+    {
+      name: "dogbond-expenses",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        expenses: state.expenses,
+        summary: state.summary,
+        categories: state.categories,
+      }),
     }
-  },
-
-  fetchSummary: async (dogId, year, month) => {
-    try {
-      const params = new URLSearchParams({ dogId });
-      if (year) params.set("year", String(year));
-      if (month) params.set("month", String(month));
-      const data = await api.get<ExpenseSummary>(`/api/expenses/summary?${params.toString()}`);
-      set({ summary: data ?? null });
-    } catch {}
-  },
-
-  createExpense: async (input) => {
-    try {
-      const created = await api.post<DogExpense>("/api/expenses", input);
-      if (created) {
-        set((s) => ({ expenses: [created, ...s.expenses] }));
-      }
-      return created ?? null;
-    } catch {
-      return null;
-    }
-  },
-
-  deleteExpense: async (id) => {
-    try {
-      await api.delete(`/api/expenses/${id}`);
-      set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }));
-      return true;
-    } catch {
-      return false;
-    }
-  },
-
-  createCategory: async (input) => {
-    try {
-      const created = await api.post<ExpenseCategory>("/api/expenses/categories", input);
-      if (created) {
-        set((s) => ({ categories: [...s.categories, created] }));
-      }
-      return created ?? null;
-    } catch {
-      return null;
-    }
-  },
-}));
+  )
+);

@@ -1,4 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../lib/api";
 import type { Dog, Match } from "../types";
 import { sortCandidates } from "../lib/tagSort";
@@ -24,58 +26,76 @@ interface MatchState {
   reset: () => void;
 }
 
-export const useMatchStore = create<MatchState>((set) => ({
-  candidates: [],
-  matches: [],
-  likesYou: [],
-  loadingCandidates: false,
+export const useMatchStore = create<MatchState>()(
+  persist(
+    (set) => ({
+      candidates: [],
+      matches: [],
+      likesYou: [],
+      loadingCandidates: false,
 
-  reset: () => set({ candidates: [], matches: [], likesYou: [], loadingCandidates: false }),
+      reset: () =>
+        set({ candidates: [], matches: [], likesYou: [], loadingCandidates: false }),
 
-  fetchCandidates: async (myDogId, myDog) => {
-    set({ loadingCandidates: true });
+      fetchCandidates: async (myDogId, myDog) => {
+        set({ loadingCandidates: true });
 
-    try {
-      const dogs = await api.get<Dog[]>(`/api/dogs/candidates/list?dogId=${myDogId}`);
-      const sorted = myDog ? sortCandidates(dogs ?? [], myDog) : (dogs ?? []);
-      set({ candidates: sorted, loadingCandidates: false });
-    } catch {
-      set({ loadingCandidates: false });
+        try {
+          const dogs = await api.get<Dog[]>(`/api/dogs/candidates/list?dogId=${myDogId}`);
+          const sorted = myDog ? sortCandidates(dogs ?? [], myDog) : (dogs ?? []);
+          set({ candidates: sorted, loadingCandidates: false });
+        } catch {
+          set({ loadingCandidates: false });
+        }
+      },
+
+      swipe: async (myDogId, targetDogId, direction) => {
+        set((s) => ({
+          candidates: s.candidates.filter((d) => d.id !== targetDogId),
+          // Optimistically remove from likesYou too — if I just responded to someone
+          // who liked me, they shouldn't show in the pending list anymore.
+          likesYou: s.likesYou.filter((d) => d.id !== targetDogId),
+        }));
+
+        try {
+          const result = await api.post<SwipeResponse>("/api/swipes", {
+            swiper_dog_id: myDogId,
+            swiped_dog_id: targetDogId,
+            direction,
+          });
+
+          return result.matched && result.match ? result.match : null;
+        } catch {
+          return null;
+        }
+      },
+
+      fetchMatches: async (myDogId) => {
+        try {
+          const data = await api.get<Match[]>(`/api/matches?dogId=${myDogId}`);
+          set({ matches: data ?? [] });
+        } catch {
+          // Don't clobber on transient failure — keep cached matches.
+        }
+      },
+
+      fetchLikesYou: async (myDogId) => {
+        try {
+          const data = await api.get<LikedYouDog[]>(`/api/swipes/likes-you?dogId=${myDogId}`);
+          set({ likesYou: data ?? [] });
+        } catch {}
+      },
+    }),
+    {
+      name: "dogbond-matches",
+      storage: createJSONStorage(() => AsyncStorage),
+      // Persist matches + likesYou so the chat list shows immediately
+      // on app reopen, before fetchMatches finishes. Don't persist
+      // candidates (those should always be fresh) or loading flags.
+      partialize: (state) => ({
+        matches: state.matches,
+        likesYou: state.likesYou,
+      }),
     }
-  },
-
-  swipe: async (myDogId, targetDogId, direction) => {
-    set((s) => ({
-      candidates: s.candidates.filter((d) => d.id !== targetDogId),
-      // Optimistically remove from likesYou too — if I just responded to someone
-      // who liked me, they shouldn't show in the pending list anymore.
-      likesYou: s.likesYou.filter((d) => d.id !== targetDogId),
-    }));
-
-    try {
-      const result = await api.post<SwipeResponse>("/api/swipes", {
-        swiper_dog_id: myDogId,
-        swiped_dog_id: targetDogId,
-        direction,
-      });
-
-      return result.matched && result.match ? result.match : null;
-    } catch {
-      return null;
-    }
-  },
-
-  fetchMatches: async (myDogId) => {
-    try {
-      const data = await api.get<Match[]>(`/api/matches?dogId=${myDogId}`);
-      set({ matches: data ?? [] });
-    } catch {}
-  },
-
-  fetchLikesYou: async (myDogId) => {
-    try {
-      const data = await api.get<LikedYouDog[]>(`/api/swipes/likes-you?dogId=${myDogId}`);
-      set({ likesYou: data ?? [] });
-    } catch {}
-  },
-}));
+  )
+);
