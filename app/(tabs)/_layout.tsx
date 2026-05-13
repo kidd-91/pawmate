@@ -87,8 +87,6 @@ function NotificationsBootstrap() {
 }
 
 export default function TabLayout() {
-  const router = useRouter();
-
   return (
     <>
       <NotificationsBootstrap />
@@ -142,18 +140,6 @@ export default function TabLayout() {
               <TabIcon name="chat-outline" color={color} size={size} focused={focused} />
             ),
           }}
-          listeners={() => ({
-            tabPress: (e) => {
-              // Always reset chat tab to the chat list. Without this,
-              // opening someone's chat then tapping the chat tab leaves
-              // you stuck on the open chat. Using expo-router's
-              // router.replace pops the entire stack of this tab,
-              // which the previous navigation.navigate({ screen: "index" })
-              // didn't reliably do across expo-router versions.
-              e.preventDefault();
-              router.replace("/(tabs)/chat");
-            },
-          })}
         />
         <Tabs.Screen
           name="dog"
@@ -163,16 +149,6 @@ export default function TabLayout() {
               <TabIcon name="dog" color={color} size={size} focused={focused} />
             ),
           }}
-          listeners={() => ({
-            tabPress: (e) => {
-              // Re-tapping the dog tab pops back to the owner's own dog
-              // dashboard, instead of leaving the user stuck on someone
-              // else's profile they just viewed (the bug where the back
-              // arrow appears in a tab that shouldn't have one).
-              e.preventDefault();
-              router.replace("/(tabs)/dog");
-            },
-          })}
         />
         <Tabs.Screen
           name="profile"
