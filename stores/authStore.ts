@@ -42,17 +42,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const prev = get().session;
     const prevUserId = prev?.user?.id;
     const nextUserId = session?.user?.id;
-    // Clear domain stores when the user identity actually changes
-    // (login, logout, switch account). Stale data — myDog from another
-    // user, candidates / matches / messages / health / expenses from
-    // a previous session — is the root cause of several reported bugs.
-    if (prevUserId !== nextUserId) {
+
+    // Only three cases need to clear:
+    // 1. Switching users (A → B) — different person, wipe everything.
+    // 2. Logging out (X → null) — privacy.
+    // 3. Initial restore (null → X) or same-user refresh — DO NOT wipe.
+    //    Wiping here would erase the data we just hydrated from cache,
+    //    which is the bug where users complained "重啟 app 要等 10 秒
+    //    才看到資料" — cache loaded fine, then we deleted it ourselves.
+    if (prevUserId && nextUserId && prevUserId !== nextUserId) {
       clearAllStores();
-      if (!nextUserId) {
-        // Also wipe identity caches when logging out / session expires.
-        set({ profile: null, myDog: null });
-      }
+      set({ profile: null, myDog: null });
+    } else if (prevUserId && !nextUserId) {
+      clearAllStores();
+      set({ profile: null, myDog: null });
     }
+
     set({ session, loading: false });
   },
 
