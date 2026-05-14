@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api } from "../lib/api";
+import { readCache, writeCache } from "../lib/cache";
 import type { Dog, Match } from "../types";
 import { sortCandidates } from "../lib/tagSort";
 
@@ -21,6 +22,7 @@ interface MatchState {
   swipe: (myDogId: string, targetDogId: string, direction: "like" | "pass") => Promise<Match | null>;
   fetchMatches: (myDogId: string) => Promise<void>;
   fetchLikesYou: (myDogId: string) => Promise<void>;
+  hydrateFromCache: () => Promise<void>;
   reset: () => void;
 }
 
@@ -68,14 +70,34 @@ export const useMatchStore = create<MatchState>((set) => ({
   fetchMatches: async (myDogId) => {
     try {
       const data = await api.get<Match[]>(`/api/matches?dogId=${myDogId}`);
-      set({ matches: data ?? [] });
-    } catch {}
+      const matches = data ?? [];
+      set({ matches });
+      writeCache("matches", matches);
+    } catch {
+      // Don't clobber on transient failure (Render cold start) — keep
+      // whatever's already shown so the chat list doesn't blank out.
+    }
   },
 
   fetchLikesYou: async (myDogId) => {
     try {
       const data = await api.get<LikedYouDog[]>(`/api/swipes/likes-you?dogId=${myDogId}`);
-      set({ likesYou: data ?? [] });
+      const likesYou = data ?? [];
+      set({ likesYou });
+      writeCache("likesYou", likesYou);
     } catch {}
+  },
+
+  // Hydrate matches/likesYou from disk on app startup so the chat list
+  // shows immediately instead of empty-while-loading.
+  hydrateFromCache: async () => {
+    const [matches, likesYou] = await Promise.all([
+      readCache<Match[]>("matches"),
+      readCache<LikedYouDog[]>("likesYou"),
+    ]);
+    set((s) => ({
+      matches: s.matches.length === 0 && matches ? matches : s.matches,
+      likesYou: s.likesYou.length === 0 && likesYou ? likesYou : s.likesYou,
+    }));
   },
 }));

@@ -6,6 +6,8 @@ import { StyleSheet } from "react-native";
 import { theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
+import { useMatchStore } from "../stores/matchStore";
+import { useExpenseStore } from "../stores/expenseStore";
 
 export default function RootLayout() {
   const { session, setSession, loading } = useAuthStore();
@@ -13,6 +15,14 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Hydrate stores from disk cache before anything else, so screens
+    // that depend on myDog/matches/expenses render with last-known
+    // data immediately on app launch (instead of empty-while-loading).
+    // Server fetches below then refresh in the background.
+    useAuthStore.getState().hydrateFromCache();
+    useMatchStore.getState().hydrateFromCache();
+    useExpenseStore.getState().hydrateFromCache();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         const { fetchProfile, fetchMyDog } = useAuthStore.getState();

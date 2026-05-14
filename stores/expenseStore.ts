@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api } from "../lib/api";
+import { readCache, writeCache } from "../lib/cache";
 import type { DogExpense, ExpenseCategory, ExpenseSummary } from "../types";
 
 interface CreateExpenseInput {
@@ -31,6 +32,7 @@ interface ExpenseState {
     icon?: string;
     color?: string;
   }) => Promise<ExpenseCategory | null>;
+  hydrateFromCache: () => Promise<void>;
   reset: () => void;
 }
 
@@ -56,8 +58,11 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       if (opts?.from) params.set("from", opts.from);
       if (opts?.to) params.set("to", opts.to);
       const data = await api.get<DogExpense[]>(`/api/expenses?${params.toString()}`);
-      set({ expenses: data ?? [], loading: false });
+      const expenses = data ?? [];
+      set({ expenses, loading: false });
+      writeCache("expenses", expenses);
     } catch {
+      // Don't clobber on transient failure — keep cached expenses.
       set({ loading: false });
     }
   },
@@ -69,7 +74,19 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       if (month) params.set("month", String(month));
       const data = await api.get<ExpenseSummary>(`/api/expenses/summary?${params.toString()}`);
       set({ summary: data ?? null });
+      if (data) writeCache("expenseSummary", data);
     } catch {}
+  },
+
+  hydrateFromCache: async () => {
+    const [expenses, summary] = await Promise.all([
+      readCache<DogExpense[]>("expenses"),
+      readCache<ExpenseSummary>("expenseSummary"),
+    ]);
+    set((s) => ({
+      expenses: s.expenses.length === 0 && expenses ? expenses : s.expenses,
+      summary: s.summary ?? summary,
+    }));
   },
 
   createExpense: async (input) => {

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
+import { readCache, writeCache, clearCache, clearAllCaches } from "../lib/cache";
 import { useMatchStore } from "./matchStore";
 import { useHealthStore } from "./healthStore";
 import { useExpenseStore } from "./expenseStore";
@@ -26,6 +27,7 @@ interface AuthState {
   setSession: (session: Session | null) => void;
   fetchProfile: () => Promise<void>;
   fetchMyDog: () => Promise<void>;
+  hydrateFromCache: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error?: string }>;
 }
@@ -58,24 +60,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const data = await api.get<Profile>("/api/auth/me");
       set({ profile: data ?? null });
+      if (data) writeCache("profile", data);
     } catch {
-      set({ profile: null });
+      // Don't clobber on transient failure (Render cold start) —
+      // keep whatever cached value we already have.
     }
   },
 
   fetchMyDog: async () => {
     try {
       const data = await api.get<Dog>("/api/dogs/mine");
-      // Important: always set, even on null/empty — otherwise a previous
-      // user's dog stays cached when the new user has no dog yet.
       set({ myDog: data ?? null });
+      if (data) writeCache("myDog", data);
+      else clearCache("myDog");
     } catch {
-      set({ myDog: null });
+      // Same — leave cached myDog alone if the request failed.
     }
+  },
+
+  // Called once on app startup, before the network is reachable.
+  // Hydrates myDog/profile from disk so screens that depend on them
+  // (chat list, expenses, dog dashboard) render immediately instead
+  // of showing empty for the duration of the first server fetch.
+  hydrateFromCache: async () => {
+    const [profile, myDog] = await Promise.all([
+      readCache<Profile>("profile"),
+      readCache<Dog>("myDog"),
+    ]);
+    set((s) => ({
+      profile: s.profile ?? profile,
+      myDog: s.myDog ?? myDog,
+    }));
   },
 
   signOut: async () => {
     clearAllStores();
+    await clearAllCaches();
     await supabase.auth.signOut();
     set({ session: null, profile: null, myDog: null });
   },
@@ -84,6 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.delete("/api/auth/me");
       clearAllStores();
+      await clearAllCaches();
       await supabase.auth.signOut();
       set({ session: null, profile: null, myDog: null });
       return {};
