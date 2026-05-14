@@ -149,7 +149,7 @@ export default function ChatListScreen() {
                   profile, leaving the rest of the row to open the chat
                   as before. */}
               <TouchableOpacity
-                onPress={() => router.push(`/(tabs)/dog/${otherDog.id}`)}
+                onPress={() => router.push(`/(tabs)/dog/${otherDog.id}?from=chat`)}
                 hitSlop={6}
                 activeOpacity={0.7}
               >

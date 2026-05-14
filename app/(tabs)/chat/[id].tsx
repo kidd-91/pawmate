@@ -1,4 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Message } from "../../../types";
+
+// Items rendered in the chat FlatList: messages interleaved with date
+// dividers ("今天" / "昨天" / "5月12日 (週一)"). Built once per messages
+// change in a useMemo below.
+type ChatItem =
+  | { type: "divider"; id: string; label: string }
+  | { type: "message"; id: string; msg: Message };
+
+function formatDayLabel(d: Date): string {
+  const today = new Date();
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (sameDay(d, today)) return "今天";
+  if (sameDay(d, yesterday)) return "昨天";
+
+  const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+  const w = weekdays[d.getDay()];
+  // Cross-year shows the year, otherwise just month/day for compactness.
+  const sameYear = d.getFullYear() === today.getFullYear();
+  return sameYear
+    ? `${d.getMonth() + 1}月${d.getDate()}日 (週${w})`
+    : `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (週${w})`;
+}
+
 import {
   View,
   StyleSheet,
@@ -91,6 +121,25 @@ export default function ChatRoomScreen() {
   const myUserId = session?.user?.id;
   const keyboardHeight = useKeyboardHeight();
 
+  // Build a list of [date-divider, message, message, date-divider, ...]
+  // by walking through messages in chronological order and inserting a
+  // divider whenever the day changes (LINE-style). Memoized so we
+  // only recompute when messages change.
+  const items = useMemo<ChatItem[]>(() => {
+    const out: ChatItem[] = [];
+    let lastDay = "";
+    for (const m of messages) {
+      const d = new Date(m.created_at);
+      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (dayKey !== lastDay) {
+        out.push({ type: "divider", id: `d-${dayKey}`, label: formatDayLabel(d) });
+        lastDay = dayKey;
+      }
+      out.push({ type: "message", id: m.id, msg: m });
+    }
+    return out;
+  }, [messages]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -104,11 +153,22 @@ export default function ChatRoomScreen() {
       <PawBackground />
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
         renderItem={({ item }) => {
-          const isMine = item.sender_id === myUserId;
+          if (item.type === "divider") {
+            return (
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>{item.label}</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            );
+          }
+
+          const m = item.msg;
+          const isMine = m.sender_id === myUserId;
 
           return (
             <View
@@ -140,10 +200,10 @@ export default function ChatRoomScreen() {
                     isMine ? styles.myText : styles.otherText,
                   ]}
                 >
-                  {item.content}
+                  {m.content}
                 </Text>
                 <Text style={[styles.time, isMine ? styles.myTime : styles.otherTime]}>
-                  {new Date(item.created_at).toLocaleTimeString("zh-TW", {
+                  {new Date(m.created_at).toLocaleTimeString("zh-TW", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
@@ -209,6 +269,23 @@ const styles = StyleSheet.create({
   messageList: {
     padding: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.md,
+    fontWeight: "500",
   },
   bubbleRow: {
     flexDirection: "row",
